@@ -1,6 +1,5 @@
 # SRPGギアMV/MZ 利用規約
 SRPGギアMV/MZは、RPGツクールMV/MZでシミュレーションRPG（Tactical Battle System）を制作する素材です。
-
 素材は、本体であるプラグイン（SRPG_core）と複数の制作者様による拡張プラグイン、およびサンプルゲームから出来ています。
 
 ## プラグイン・サンプル共通の利用規約
@@ -33,8 +32,9 @@ SRPGギアMV/MZは、RPGツクールMV/MZでシミュレーションRPG（Tactic
 
 ## その他
 1. 基本的に制限はほぼありませんが、創作者としてふさわしくない行為は禁止です。
+例：
 
-例：あからさまな自作発言
+    あからさまな自作発言
 
     本素材をそのまま有償販売する行為
 
@@ -45,12 +45,10 @@ SRPGギアMV/MZは、RPGツクールMV/MZでシミュレーションRPG（Tactic
 2. 免責事項
 
 本素材を利用したことによるいかなる損失・損害・第三者との紛争などについて、制作者は一切の責任を負わないものとします。
-
 また、プラグインの競合については原則ご自身でご対応ください。
 
 # SRPG Gear MV/MZ Terms of Use
 SRPG Gear MV/MZ is a material for creating simulation RPG (Tactical Battle System) in RPG Maker MV/MZ.
-
 The material consists of the main plug-in (SRPG_core), extended plug-ins by multiple creators, and sample games.
 
 ## Common terms of use for plug-ins and sample games
@@ -66,7 +64,6 @@ The material consists of the main plug-in (SRPG_core), extended plug-ins by mult
 (1) SRPG_core.js/SRPG_core_MZ.js is released under the MIT License.
 
 (2) There are no restrictions on the scope of use.You can use it not only for free games, but also for commercial works or adult-oriented works.
-
     Modification and redistribution are also permitted under the MIT License.
 
 (3) The included plug-ins are also released under the MIT License, but please check the license of each plug-in for details.
@@ -77,16 +74,13 @@ The material consists of the main plug-in (SRPG_core), extended plug-ins by mult
 (2) You are free to open the game in an editor and copy the contents.
 
 (3) Redistribution is permitted only for free of charge.
-
     However, in the case of redistribution with modification, voluntary donations may be accepted. When redistributing modified versions of the game, 
-
     please clearly state that the game is based on this sample game. 
 
 (4) Regardless of whether the game has been modified or not, please let us know when you redistribute it.
 
 ## Other
 (1) Basically, there are almost no restrictions, but any behavior unbecoming of a creator is prohibited.
-
 For example
 
 - Blatant self-created statements
@@ -98,7 +92,5 @@ For example
 - Other acts deemed inappropriate.
 
 (2) Disclaimer
-
 The creator assumes no responsibility for any loss, damage, or dispute with a third party resulting from the use of this material.
-
 In addition, as a rule, please deal with plug-in conflicts by yourself.
