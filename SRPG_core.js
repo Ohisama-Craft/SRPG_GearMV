@@ -1,7 +1,7 @@
 //=============================================================================
 // SRPG_core.js -SRPGギアMV-
-// バージョン      : 1.00 + Q
-// 最終更新日      : 2022/12/11
+// バージョン      : 1.02 + Q
+// 最終更新日      : 2023/2/15
 // 制作            : 有明タクミ(おひさまクラフト)
 // ベースプラグイン : SRPGコンバータMV（神鏡学斗(Lemon slice), Dr. Q氏, アンチョビ氏, エビ氏, Tsumio氏）
 // 配布元          : http:
@@ -605,6 +605,7 @@
  * 	<srpgThroughTag:X>
  * 		# Can pass through tiles with a terrain tag of X or less 
  * 		# (not valid for terrain tag 0).
+ *      # And 'Terrain Cost' of RangeControl.js is also set to 1.
  * 	<srpgWeaponSkill:X>
  * 		# When attacking, use the skill with the ID set by X 
  * 		# instead of the normal attack (ID 1).
@@ -688,6 +689,7 @@
  * 	<srpgThroughTag:X>
  * 		# Can pass through tiles with a terrain tag of X or less 
  * 		# (not valid for terrain tag 0).
+ *      # And 'Terrain Cost' of RangeControl.js is also set to 1.
  * 	<srpgCounter:false>
  * 		# Will not fight back against attacks from opponents
  * 		# (different from counter-attack rate).
@@ -713,6 +715,7 @@
  * 	<srpgThroughTag:X>
  * 		# Can pass through tiles with a terrain tag of X or less 
  * 		# (not valid for terrain tag 0).
+ *      # And 'Terrain Cost' of RangeControl.js is also set to 1.
  * 
  * === tags on Enemy ===
  * 	<characterName:X>
@@ -763,6 +766,7 @@
  * 	<srpgThroughTag:X>
  * 		# Can pass through tiles with a terrain tag of X or less 
  * 		# (not valid for terrain tag 0).
+ *      # And 'Terrain Cost' of RangeControl.js is also set to 1.
  * 	<srpgAlternativeSkillId:X>
  * 		# Specifies the ID of the skill to be used instead if
  * 		# the action selected is determined not to be used by <simpleAI:X>.
@@ -791,8 +795,9 @@
  * 		# Change the mobility by the amount of X.
  * 		# Negative values can also be set.
  * 	<srpgThroughTag:X>
- * 		# Can pass through tiles with a terrain tag of X or less 
+ * 		# Can pass through tiles with a terrain tag of X or less
  * 		# (not valid for terrain tag 0).
+ *      # And 'Terrain Cost' of RangeControl.js is also set to 1.
  * 	<srpgWeaponBreak>
  * 		# Weapons are disabled for the duration of that state.
  * 		# If unit is actor, it will not be able to change weapon either.
@@ -1668,6 +1673,7 @@
  *      # その職業のアクターの移動力をXに設定します。
  *   <srpgThroughTag:X>
  *      # X以下の地形タグが設定されたタイルを通過できます（地形タグ 0 には無効）。
+ *      # また、RangeControl.jsの'Terrain Cost'も 1 になります。
  *   <srpgWeaponSkill:X>
  *      # 攻撃時に、通常攻撃(ID 1)ではなく、Xで設定したIDのスキルを使用します。
  *   <specialRange:X>
@@ -1741,6 +1747,7 @@
  *      # X の分だけ移動力を変化させます。マイナスの値も設定可能です。
  *   <srpgThroughTag:X>
  *      # X 以下の地形タグが設定されたタイルを通過できます（地形タグ 0 には無効）。
+ *      # また、RangeControl.jsの'Terrain Cost'も 1 になります。
  *   <srpgCounter:false>
  *      # 相手からの攻撃に対して応戦しなくなります（反撃率とは異なる）。
  *      # 現在は<srpgReactionSkill:0>と設定することを推奨していますが、
@@ -1760,6 +1767,7 @@
  *      # Xの分だけ移動力を変化させます。マイナスの値も設定可能です。
  *   <srpgThroughTag:X>
  *      # X以下の地形タグが設定されたタイルを通過できます（地形タグ 0 には無効）。
+ *      # また、RangeControl.jsの'Terrain Cost'も 1 になります。
  * 
  * === エネミーのメモ ===
  *   <characterName:X>
@@ -1800,6 +1808,7 @@
  *      # 設定の方法はスキルと同じです。
  *   <srpgThroughTag:X>
  *      # X 以下の地形タグが設定されたタイルを通過できます(地形タグ 0 には無効)。
+ *      # また、RangeControl.jsの'Terrain Cost'も 1 になります。
  *   <srpgAlternativeSkillId:X>
  *      # 選択された行動が<simpleAI:X>によって使用しないと判定された場合
  *      # 代わりに使用するスキルのIDを指定します。
@@ -1824,6 +1833,7 @@
  *      # マイナスの値も設定可能です。
  *   <srpgThroughTag:X>
  *      # X以下の地形タグが設定されたタイルを通過できます(地形タグ 0 には無効)。
+ *      # また、RangeControl.jsの'Terrain Cost'も 1 になります。
  *   <srpgWeaponBreak>
  *      # そのステートの間、武器が無効化されます。
  *      # アクターの場合、武器の変更も出来なくなります。
@@ -2102,6 +2112,12 @@
  *   新規のスキルのタグ:
  *   <doubleAction:false>
  *      # そのスキルでは2回行動しなくなります。
+ * 
+ * ============================================================================
+ * 更新履歴
+ * ============================================================================
+ * Ver 1.02Q : マップでアイテムを使用するとエラーが出る問題を修正
+ * Ver 1.00Q : リリース
  * 
  */
 
@@ -3275,7 +3291,7 @@
                     (this.hasItemAnyValidEffects(target)))
             );
         } else {
-            return _SRPG_AAP_Game_Action_testApply.call(this);
+            return _SRPG_AAP_Game_Action_testApply.call(this, target);
         }
     };
 
@@ -4599,7 +4615,7 @@
             this._enemies = [];
             for (var i = 0; i < this.SrpgBattleEnemys().length; i++) {
                 var enemy = this.SrpgBattleEnemys()[i];
-                enemy.setScreenXy(200 + 240 * i + enemy.correctionX(), Graphics.height / 2 + 48 + enemy.correctionY());
+                enemy.setScreenXy(Graphics.width / 4 + 240 * i + enemy.correctionX(), Graphics.height / 2 + 48 + enemy.correctionY());
                 this._enemies.push(enemy);
             }
             this.makeUniqueNames();
@@ -6055,10 +6071,10 @@
     Sprite_Actor.prototype.setActorHome = function(index) {
         if ($gameSystem.isSRPGMode() === true) {
             if (_AAPwithYEP_BattleEngineCore === 'true') {
-                this.setHome(Graphics.width - 216 - index * 240, Graphics.height / 2 + 48);
+                this.setHome(Graphics.width * 3 / 4 - 12 - index * 240, Graphics.height / 2 + 48);
 	            this.moveToStartPosition();
 	        } else {
-                this.setHome(Graphics.width - 216 - index * 240, Graphics.height / 2 + 48);
+                this.setHome(Graphics.width * 3 / 4 - 12 - index * 240, Graphics.height / 2 + 48);
             }
         } else {
             _SRPG_Sprite_Actor_setActorHome.call(this, index);
@@ -10333,6 +10349,7 @@
 		}
 	};
 
+    // ここにisWaitで移動中でないか確認を入れる？
 	// create the damage pop-up
 	Sprite_Character.prototype.setupDamagePopup_MB = function() {
 		var array = $gameSystem.EventToUnit(this._character.eventId());
