@@ -392,7 +392,7 @@
             const battlerArray = $gameSystem.EventToUnit(this._subjectEventId);
             return battlerArray[1];
         } else {
-            _Game_Action_subject.call(this);
+            return _Game_Action_subject.call(this);
         }
     };
 
