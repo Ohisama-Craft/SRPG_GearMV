@@ -114,6 +114,7 @@
 	}
 
 	// cancel movement or target, plus quick targeting
+	/*
 	var _updateCallMenu = Scene_Map.prototype.updateCallMenu;
 	Scene_Map.prototype.updateCallMenu = function() {
 		if ($gameSystem.isSRPGMode() && !$gameSystem.srpgWaitMoving()) {
@@ -129,6 +130,7 @@
 		}
 		_updateCallMenu.call(this);
 	};
+	*/
 
 //====================================================================
 // correctly handle enabled / disabled options in the menu
