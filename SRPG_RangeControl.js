@@ -174,6 +174,9 @@
  *
  *
  * @help
+ * Copyright (c) 2020 SRPG Team. All rights reserved.
+ * Released under the MIT license.
+ * ===================================================================
  * Adds line of sight, modifiable ranges, passability options, zone of control,
  * and terrain-based movement costs for SRPG combat
  *
@@ -398,6 +401,9 @@
  *
  *
  * @help
+ * Copyright (c) 2020 SRPG Team. All rights reserved.
+ * Released under the MIT license.
+ * ===================================================================
  * SRPG戦闘において、射線（攻撃範囲の制限）、射程の変更、通行オプション、zone of control(ZoC)、
  * 地形タグによる移動コストの機能を追加する。
  * 
