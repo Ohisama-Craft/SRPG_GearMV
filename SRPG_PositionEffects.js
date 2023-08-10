@@ -10,6 +10,9 @@
  * @author Dr. Q
  *
  * @help
+ * Copyright (c) 2020 SRPG Team. All rights reserved.
+ * Released under the MIT license.
+ * ===================================================================
  * Script calls that can be put in damage formulas or lunatic notetags
  * to make skills that push, pull, move, and teleport.
  *
