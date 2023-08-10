@@ -10,6 +10,9 @@
 * @author SRPG Team
 *
 * @help
+* Copyright (c) 2020 SRPG Team. All rights reserved.
+* Released under the MIT license.
+* ===================================================================
 * My (RyanBram) simple plugin for adjusting RPG Maker MV UI (menu)
 * to make it more unique for SRPG Battle
 * edited by Shoukang to support battlePrepare plugin compatibility
@@ -21,6 +24,9 @@
 * @author SRPG Team
 *
 * @help
+* Copyright (c) 2020 SRPG Team. All rights reserved.
+* Released under the MIT license.
+* ===================================================================
 * RyanBram氏による、メニュー画面をSRPGバトル向けUIに変更するプラグイン
 * Shoukang氏のbattlePrepare pluginとの競合対策あり
 * おひさまクラフトによる改変あり
