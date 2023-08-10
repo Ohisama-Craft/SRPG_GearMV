@@ -31,6 +31,9 @@
  *
  *
  * @help
+ * Copyright (c) 2020 SRPG Team. All rights reserved.
+ * Released under the MIT license.
+ * ===================================================================
  * Allows you to define an area of effect for attacks
  * Based on SRPG_AreaAttack.js by アンチョビ
  *
@@ -201,6 +204,9 @@
  *
  *
  * @help
+ * Copyright (c) 2020 SRPG Team. All rights reserved.
+ * Released under the MIT license.
+ * ===================================================================
  * 範囲効果のあるスキル・アイテムを作成できるようにします
  * アンチョビ氏による SRPG_AreaAttack.js をベースにしています
  *
