@@ -1,5 +1,8 @@
 //====================================================================================================================
 // SRPG_BattlePrepare.js
+// Copyright (c) 2020 Shoukang. All rights reserved.
+// Released under the MIT license.
+// http://opensource.org/licenses/mit-license.php
 //--------------------------------------------------------------------------------------------------------------------
 // free to use and edit     V1.07 Disable selection of dead actors. Please also find 'var array = $gameParty.allMembers()' in SRPG_Core and replace with
 // 'var array = $gameParty.allMembers().filter(function(actor){return actor.isAlive()})' to make sure it works.
@@ -56,7 +59,9 @@
  * @default 195
  *
  * @help
- *
+ * Copyright (c) 2020 Shoukang. All rights reserved.
+ * Released under the MIT license.
+ * ===================================================================
  * This plugin allows you to prepare before battle. You can change equipment, see enemy's status, remove or add actors,
  * and switch actor positions in battle Prepare phase.
  * Events with <type:actor><id:0> are moveable. AutoBattle members are also moveable in this new version.
