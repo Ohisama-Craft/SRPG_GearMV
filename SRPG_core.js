@@ -1,14 +1,14 @@
 //=============================================================================
 // SRPG_core.js -SRPGギアMV-
-// バージョン      : 1.03 + Q
-// 最終更新日      : 2023/6/21
+// バージョン      : 1.04 + Q
+// 最終更新日      : 2023/8/10
 // 製作            : Tkool SRPG team（有明タクミ、RyanBram、Dr.Q、Shoukang、Boomy）
 // 協力            : アンチョビさん、エビさん、Tsumioさん
 // ベースプラグイン : SRPGコンバータMV（神鏡学斗(Lemon slice), Dr. Q, アンチョビ, エビ, Tsumio）
 // 配布元          : https://ohisamacraft.nyanta.jp/index.html
 //-----------------------------------------------------------------------------
 // copyright 2017 - 2021 Lemon slice all rights reserved.
-// copyright 2022 Tkool SRPG team all rights reserved.
+// copyright 2022 Takumi Ariake (Tkool SRPG team) all rights reserved.
 // Released under the MIT license.
 // http://opensource.org/licenses/mit-license.php
 //=============================================================================
@@ -407,7 +407,9 @@
  * @noteData enemies
  *
  * @help
- * 
+ * copyright 2017 - 2021 Lemon slice all rights reserved.
+ * copyright 2022 Takumi Ariake (Tkool SRPG team) all rights reserved.
+ * Released under the MIT license.
  * ============================================================================
  * Overview
  * ============================================================================
@@ -428,8 +430,8 @@
  * please put it below this plugin (SRPG_core.js).
  * 
  * - Required images
- * characters/srpg_set.png
- * system/srpgPath.png (when using SRPG_ShowPath)
+ * characters/!srpg_set_type1.png or !srpg_set_type2.png
+ * system/srpgPath.png
  * faces/BigMonster.png (optional)
  * 
  * - "Required" plug-ins
@@ -1506,6 +1508,9 @@
  * @noteData enemies
  *
  * @help
+ * copyright 2017 - 2021 Lemon slice all rights reserved.
+ * copyright 2022 Takumi Ariake (Tkool SRPG team) all rights reserved.
+ * Released under the MIT license.
  * ============================================================================
  * 概要
  * ============================================================================
@@ -1525,8 +1530,8 @@
  * 本プラグイン（SRPG_core.js）より下に入れるようにしてください。
  * 
  * - 必要な画像
- * characters/srpg_set.png
- * system/srpgPath.png（SRPG_ShowPath使用時）
+ * characters/!srpg_set_type1.png または !srpg_set_type2.png
+ * system/srpgPath.png
  * faces/BigMonster.png (任意)
  * 
  * - 併用“必須”プラグイン
@@ -5891,9 +5896,6 @@
             battlerArray[1].onAllActionsEnd();
             battlerArray[1].useSRPGActionTimes(99);
             battlerArray[1].setSrpgTurnEnd(true);
-            if ($gameSystem.isBattlePhase() === 'actor_phase' && !this.isSrpgActorTurnEnd()) {
-                $gameSystem.srpgStartAutoActorTurn(); //自動行動のアクターが行動する
-            }
         }
         return true;
     };
@@ -8298,13 +8300,27 @@
             this.srpgAfterAction();
             return;
         }
+        this.srpgControlPhase(); // 戦闘フェーズの制御
+    };
+
+    // 戦闘フェーズの制御
+    Scene_Map.prototype.srpgControlPhase = function() {
         // アクターフェイズの開始処理
-        if ($gameSystem.isBattlePhase() === 'actor_phase' && $gameSystem.isSubBattlePhase() === 'initialize') {
-            if (!this.isSrpgActorTurnEnd()) {
-                $gameSystem.srpgStartAutoActorTurn(); // 自動行動のアクターが行動する
-            } else {
-                $gameSystem.setSubBattlePhase('normal');
-                $gameSystem.preloadFaceGraphic(); // 顔グラフィックをプリロードする
+        if ($gameSystem.isBattlePhase() === 'actor_phase') {
+            if ($gameSystem.isSubBattlePhase() === 'initialize') {
+                if (!this.isSrpgActorTurnEnd()) {
+                    $gameSystem.srpgStartAutoActorTurn(); // 自動行動のアクターが行動する
+                    return;
+                } else {
+                    $gameSystem.setSubBattlePhase('normal');
+                    $gameSystem.preloadFaceGraphic(); // 顔グラフィックをプリロードする
+                    return;
+                }
+            } else if ($gameSystem.isSubBattlePhase() === 'normal') {
+                if (!this.isSrpgActorTurnEnd()) {
+                    $gameSystem.srpgStartAutoActorTurn(); // 自動行動のアクターが行動する
+                    return;
+                }
             }
         }
         // 自動アクターフェイズの処理
@@ -8484,13 +8500,13 @@
         }
         this.eventAfterAction();
         $gameTemp.clearActiveEvent();
-        // 次のユニットのターンにつなげる
+        this.passTurnNextUnit(); // 次のユニットのターンにつなげる
+    };
+
+    // 次のユニットにターンを回す
+    Scene_Map.prototype.passTurnNextUnit = function() {
         if ($gameSystem.isBattlePhase() === 'actor_phase') {
-            if (!this.isSrpgActorTurnEnd()) {
-                $gameSystem.srpgStartAutoActorTurn(); //自動行動のアクターが行動する
-            } else {
-                $gameSystem.setSubBattlePhase('normal');
-            }
+            $gameSystem.setSubBattlePhase('normal');
         } else if ($gameSystem.isBattlePhase() === 'auto_actor_phase') {
             $gameSystem.setSubBattlePhase('auto_actor_command');
         } else if ($gameSystem.isBattlePhase() === 'enemy_phase') {
@@ -8821,17 +8837,7 @@
             }
         }
         $gameTemp.setAutoBattleFlag(false);
-        if ($gameSystem.isBattlePhase() === 'actor_phase') {
-            if (!this.isSrpgActorTurnEnd()) {
-                $gameSystem.srpgStartAutoActorTurn(); //自動行動のアクターが行動する
-            } else {
-                $gameSystem.setSubBattlePhase('normal');
-            }
-        } else if ($gameSystem.isBattlePhase() === 'auto_actor_phase') {
-            $gameSystem.setSubBattlePhase('auto_actor_command');
-        } else if ($gameSystem.isBattlePhase() === 'enemy_phase') {
-            $gameSystem.setSubBattlePhase('enemy_command');
-        }
+        this.passTurnNextUnit(); // 次のユニットのターンにつなげる
         $gameTemp.setTurnEndFlag(false); // 処理終了
         return;
     };
@@ -10314,6 +10320,7 @@
 		if ($gameSystem.isSRPGMode()) {
 			this._result.used = true;
 			this.srpgShowResults();
+            this.slipFloorAddDeath();// 戦闘不能の処理
 		}
 	};
 
@@ -10324,6 +10331,7 @@
 		if (this._result.hpDamage != 0) {
 			this._result.used = true;
 			this.srpgShowResults();
+            this.slipFloorAddDeath();// 戦闘不能の処理
 		}
 	};
 
@@ -10332,6 +10340,21 @@
 	Game_Screen.prototype.startFlashForDamage = function() {
 		if (!$gameSystem.isSRPGMode()) _startFlashForDamage_MB.call(this);
 	};
+
+    // スリップ・床ダメージでの戦闘不能処理
+    Game_Battler.prototype.slipFloorAddDeath = function() {
+        var event = $gameMap.event(this.srpgEventId());
+        if (this.isDead() && !event.isErased()) {
+            event.erase();
+            if (this.isActor()) {
+            var oldValue = $gameVariables.value(_existActorVarID);
+                $gameVariables.setValue(_existActorVarID, oldValue - 1);
+            } else {
+                var oldValue = $gameVariables.value(_existEnemyVarID);
+                $gameVariables.setValue(_existEnemyVarID, oldValue - 1);
+            }
+        }
+    };
 
 //====================================================================
 // on-map damage pop-ups
