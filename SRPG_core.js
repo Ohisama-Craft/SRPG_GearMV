@@ -1,7 +1,7 @@
 //=============================================================================
 // SRPG_core.js -SRPGギアMV-
-// バージョン      : 1.04 + Q
-// 最終更新日      : 2023/8/10
+// バージョン      : 1.06 + Q
+// 最終更新日      : 2023/8/21
 // 製作            : Tkool SRPG team（有明タクミ、RyanBram、Dr.Q、Shoukang、Boomy）
 // 協力            : アンチョビさん、エビさん、Tsumioさん
 // ベースプラグイン : SRPGコンバータMV（神鏡学斗(Lemon slice), Dr. Q, アンチョビ, エビ, Tsumio）
@@ -459,6 +459,7 @@
  * SRPG_Summon
  * SRPG_UX_Cursor
  * SRPG_UX_Windows
+ * SRPG_MouseOperation.js
  * 
  * /!\ Caution /!\
  * - If you are updating from SRPG Converter MV, 
@@ -1113,6 +1114,7 @@
  * 	<doubleAction: false>
  * 		# Unit will not act twice with that skill.
  *
+ * @url https://ohisamacraft.nyanta.jp/
  */
 
 /*:ja
@@ -1557,6 +1559,7 @@
  * SRPG_Summon
  * SRPG_UX_Cursor
  * SRPG_UX_Windows
+ * SRPG_MouseOperation.js
  * 
  * /!\ 注意 /!\
  * - SRPGコンバータMVからアップデートする場合
@@ -2119,6 +2122,7 @@
  *   <doubleAction:false>
  *      # そのスキルでは2回行動しなくなります。
  * 
+ * @url https://ohisamacraft.nyanta.jp/
  */
 
 (function() {
@@ -4921,7 +4925,7 @@
 
     //プレイヤーの自動移動を設定する
     var _SRPG_Game_Player_moveByInput = Game_Player.prototype.moveByInput;
-    Game_Player.prototype.moveByInput = function() {
+    Game_Player.prototype.moveByInput = function() { 
         if ($gameSystem.isSRPGMode() === true && $gameTemp.isAutoMoveDestinationValid() === true &&
             !this.isMoving()) {
             // 移動先と現在地の関係を計算する
@@ -9926,8 +9930,9 @@
 		
 		// return when event running
 		if ($gameMap.isEventRunning() == true) {
-            		return;
-        	}
+            this._logWindow.hide();
+            return;
+        }
 
 		// update map skills
 		if (!this.waitingForSkill() && !this._srpgBattleResultWindow.isChangeExp()) {
