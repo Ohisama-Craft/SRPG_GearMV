@@ -1,7 +1,7 @@
 //=============================================================================
 // SRPG_core.js -SRPGギアMV-
-// バージョン      : 1.07 + Q
-// 最終更新日      : 2023/8/22
+// バージョン      : 1.08 + Q
+// 最終更新日      : 2023/8/31
 // 製作            : Tkool SRPG team（有明タクミ、RyanBram、Dr.Q、Shoukang、Boomy）
 // 協力            : アンチョビさん、エビさん、Tsumioさん
 // ベースプラグイン : SRPGコンバータMV（神鏡学斗(Lemon slice), Dr. Q, アンチョビ, エビ, Tsumio）
@@ -2459,6 +2459,11 @@
         return event;
     };
 
+    // 実行待ちイベントリストをクリアする
+    Game_Temp.prototype.clearSrpgEventList = function() {
+        this._SrpgEventList = [];
+    };
+
     //----------------------------------------------------------------
     // 戦闘や処理の進行に関するフラグ処理
     //----------------------------------------------------------------
@@ -2728,10 +2733,9 @@
         $gameMap.events().forEach(function(event) {
             var battlerArray = $gameSystem.EventToUnit(event.eventId());
             if (battlerArray && (battlerArray[0] === 'actor' || battlerArray[0] === 'enemy')) {
-                if (_srpgBattleEndAllHeal === 'true') {
-                    battlerArray[1].recoverAll();
-                }
                 battlerArray[1].onTurnEnd();
+                battlerArray[1].onBattleEnd();
+                if (_srpgBattleEndAllHeal === 'true') battlerArray[1].recoverAll();
             }
         });
         this._SRPGMode = false; // SRPG戦闘中のフラグをオフにする
@@ -2740,6 +2744,7 @@
         this._isSubBattlePhase = 'initialize';
         $gamePlayer.refresh();
         this.clearData(); // データの初期化
+        $gameTemp.clearSrpgEventList(); //実行待ちイベントのリストを初期化する
         $gameMap.setEventImages();   // イベントのグラフィックを本来のものに変更する
     };
 
@@ -4223,7 +4228,7 @@
 
     // スキル・アイテムの射程を返す
     Game_Enemy.prototype.srpgSkillRange = function(skill) {
-        // SRPG_RangeControl.jsで再定義するvar range = 1;
+        // SRPG_RangeControl.jsで再定義する
     };
 
     // スキル・アイテムの最低射程を返す
@@ -4619,7 +4624,11 @@
             this._enemies = [];
             for (var i = 0; i < this.SrpgBattleEnemys().length; i++) {
                 var enemy = this.SrpgBattleEnemys()[i];
-                enemy.setScreenXy(Graphics.width / 4 + 240 * i + enemy.correctionX(), Graphics.height / 2 + 48 + enemy.correctionY());
+                if ($gameSystem.isSideView()) {
+                    enemy.setScreenXy(Graphics.width / 4 + 240 * i + enemy.correctionX(), Graphics.height / 2 + 48 + enemy.correctionY());
+                } else {
+                    enemy.setScreenXy(Graphics.width / 2 + enemy.correctionX(), Graphics.height / 2 + 32 + 96 * i + enemy.correctionY());
+                }
                 this._enemies.push(enemy);
             }
             this.makeUniqueNames();
@@ -7297,11 +7306,6 @@
     //----------------------------------------------------------------
     // SRPG戦闘で使用するアクターコマンドウィンドウ
     //----------------------------------------------------------------
-    // 表示する行数を変更する
-    Window_ActorCommand.prototype.numVisibleRows = function() {
-        return 8;
-    };
-
     // commandListが存在するか返す
     Window_Command.prototype.isList = function() {
         if (this._list) {
@@ -7723,7 +7727,9 @@
     // 行動順序の作成
     var _SRPG_AAP_BattleManager_makeActionOrders = BattleManager.makeActionOrders;
     BattleManager.makeActionOrders = function() {
-        _SRPG_AAP_BattleManager_makeActionOrders.call(this); // 敏捷, 速度補正をもとに行動順を作成する
+        _SRPG_AAP_BattleManager_makeActionOrders.call(this); 
+        if ($gameSystem.isSRPGMode() === false) return;
+        // 敏捷, 速度補正をもとに行動順を作成する
         // 敏捷差で２回攻撃する場合、敏捷差から行動確率を計算し、行動を保存する
         var user = $gameSystem.EventToUnit($gameTemp.activeEvent().eventId())[1];
 		var target = $gameSystem.EventToUnit($gameTemp.targetEvent().eventId())[1];
@@ -8674,11 +8680,11 @@
         var battler = $gameSystem.EventToUnit($gameTemp.activeEvent().eventId())[1];
         if (!battler.action(0).isForDeadFriend()) {
             var event = $gameTemp.activeEvent();
-            var skill = battler.currentAction().item();
+            var item = battler.currentAction().item();
             $gameTemp.clearMoveTable();
             this.skillForAll(battler.action(0).areaType());
             //$gameTemp.initialRangeTable(event.posX(), event.posY(), battler.srpgMove());
-            event.makeRangeTable(event.posX(), event.posY(), battler.srpgSkillRange(skill), [0], event.posX(), event.posY(), skill);
+            event.makeRangeTable(event.posX(), event.posY(), battler.srpgSkillRange(item), [0], event.posX(), event.posY(), item);
             //$gameTemp.minRangeAdapt(event.posX(), event.posY(), battler.srpgSkillMinRange(skill));
             $gameTemp.pushRangeListToMoveList();
             $gameTemp.setResetMoveList(true);
@@ -8686,9 +8692,11 @@
             $gameSystem.setSubBattlePhase('actor_target');
             if (_srpgSkipTargetForSelf === 'true' && battler.action(0).isForUser()) this.skillForUser();
         } else {
+            var item = battler.currentAction().item();
             this._deadActorWindow.refresh();
             this._deadActorWindow.show();
             this._deadActorWindow.activate();
+            this._deadActorWindow.selectForItem(item);
         }
     };
 
