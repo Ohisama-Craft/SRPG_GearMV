@@ -1,7 +1,7 @@
 //=============================================================================
 // SRPG_core.js -SRPGギアMV-
-// バージョン      : 1.08 + Q
-// 最終更新日      : 2023/8/31
+// バージョン      : 1.09 + Q
+// 最終更新日      : 2023/9/4
 // 製作            : Tkool SRPG team（有明タクミ、RyanBram、Dr.Q、Shoukang、Boomy）
 // 協力            : アンチョビさん、エビさん、Tsumioさん
 // ベースプラグイン : SRPGコンバータMV（神鏡学斗(Lemon slice), Dr. Q, アンチョビ, エビ, Tsumio）
@@ -2637,7 +2637,9 @@
                 // アクターの最大数が制限されている場合は、制限数以上のイベントを消去する
                 if (_maxActorVarID > 0 && $gameVariables.value(_maxActorVarID) > 0 && 
                     actorNum >= $gameVariables.value(_maxActorVarID)) {
+                    $gameSystem.setEventToUnit(event.eventId(), 'null', null);
                     event.erase();
+                    event.setType('');
                     return;
                 }
                 // IDが0より大きい場合は指定したアクターIDで、0の場合はパーティメンバーの若い順にアクターを代入する
@@ -2649,6 +2651,8 @@
                         var actor_unit = array[i];
                         if (!actor_unit) {
                             $gameSystem.setEventToUnit(event.eventId(), 'null', null);
+                            event.erase();
+                            event.setType('');
                             break;
                         }
                         i += 1;
@@ -6319,6 +6323,15 @@
 //====================================================================
 // ●Window_Base
 //====================================================================
+    // アクターのレベルを描画する
+    var _SRPG_Window_Base_drawActorLevel = Window_Base.prototype.drawActorLevel;
+    Window_Base.prototype.drawActorLevel = function(actor, x, y) {
+        if ($gameSystem.isSRPGMode() === true) {
+            this.drawSrpgExpRate(actor, x, y);
+        }
+        _SRPG_Window_Base_drawActorLevel.call(this, actor, x, y)
+    };
+
     // 次のレベルまでに必要なEXPの割合をゲージ表示する(アクター)
     Window_Base.prototype.drawSrpgExpRate = function(actor, x, y, width) {
         width = width || 120;
@@ -6504,7 +6517,7 @@
     // アクターのLv, EXP, ステート、HP, MP, TPの描画
     Window_SrpgStatus.prototype.drawBasicInfoActor = function(x, y) {
         var lineHeight = this.lineHeight();
-        this.drawSrpgExpRate(this._battler, x, y + lineHeight * 0);
+        //this.drawSrpgExpRate(this._battler, x, y + lineHeight * 0);
         this.drawActorLevel(this._battler, x, y + lineHeight * 0);
         this.drawActorIcons(this._battler, x, y + lineHeight * 1);
         this.drawActorHp(this._battler, x, y + lineHeight * 2);
@@ -6952,12 +6965,12 @@
         var lineHeight = this.lineHeight();
         var exp = Math.round(this._rewards.exp * $gameParty.battleMembers()[0].finalExpRate());
         var width = this.windowWidth() - this.padding * 2;
-        if (exp > 0) {
+        if (exp > 0 && this._level < this._battler.maxLevel()) {
             var text = TextManager.obtainExp.format(exp, TextManager.exp);
             this.resetTextColor();
             this.drawText(text, x, y, width);
         } else {
-            this._changeExp = 1;
+            exp = 0;
         }
         var color1 = this.hpGaugeColor1();
         var color2 = this.hpGaugeColor2();
@@ -6973,7 +6986,7 @@
         }
         if (this._level >= this._battler.maxLevel()) {
             var rate = 1.0;
-            var nextExp = '-------'
+            var nextExp = '----'
         } else {
             var rate = (nowExp - this._battler.expForLevel(this._level)) / 
                        (this._battler.expForLevel(this._level + 1) - this._battler.expForLevel(this._level));
@@ -7503,6 +7516,15 @@
     //----------------------------------------------------------------
     // SRPG戦闘時のメニュー画面のステータスウィンドウ
     //----------------------------------------------------------------
+    // 特定の状況で$gameParty.menuActor().index() = -1になった場合の対応
+    Window_MenuStatus.prototype.selectLast = function() {
+        if ($gameParty.menuActor().index() === -1) {
+            this.select(0);
+        } else {
+            this.select($gameParty.menuActor().index() || 0);
+        }
+    };
+
     // 行動終了や行動不能のユニットの表示を変更する
     var _SRPG_Window_MenuStatus_drawItemImage = Window_MenuStatus.prototype.drawItemImage;
     Window_MenuStatus.prototype.drawItemImage = function(index) {
