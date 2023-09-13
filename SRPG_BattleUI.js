@@ -8,6 +8,15 @@
 /*:
 * @plugindesc SRPG Battle UI adjustment, edited by Shoukang and OhisamaCraft
 * @author SRPG Team
+* 
+* @param useTurnWindow
+* @desc Change the display of the Turns window.(true / false)
+* @type boolean
+* @default true
+*
+* @param textTurn
+* @desc A term for turn. It is displayed in the menu window.
+* @default turn
 *
 * @help
 * Copyright (c) 2020 SRPG Team. All rights reserved.
@@ -22,6 +31,15 @@
 /*:ja
 * @plugindesc SRPG戦闘でのメニュー画面の変更(Shoukang氏, おひさまクラフトによる改変あり)
 * @author SRPG Team
+*
+* @param useTurnWindow
+* @desc ターン数ウィンドウの表示を変更します。(true / false)
+* @type boolean
+* @default true
+* 
+* @param textTurn
+* @desc ターン数を表す用語です。メニュー画面で使用されます。
+* @default ターン
 *
 * @help
 * Copyright (c) 2020 SRPG Team. All rights reserved.
@@ -39,12 +57,24 @@
 
   const switchId = 1;
 
+  var parameters = PluginManager.parameters('SRPG_BattleUI');
+  var _useTurnWindow = parameters['useTurnWindow'] || 'true';
+  var _textTurn = parameters['textTurn'] || 'ターン';
+
+  var coreParameters = PluginManager.parameters('SRPG_core');
+	var _turnVarID = Number(coreParameters['turnVarID'] || 3);
+
   const _Scene_Menu_createCommandWindow = Scene_Menu.prototype.createCommandWindow;
   Scene_Menu.prototype.createCommandWindow = function() {
     _Scene_Menu_createCommandWindow.call(this);
     if ($gameSystem.isSRPGMode() && $gameSystem.isBattlePhase() !== 'battle_prepare') {
       this._commandWindow.x = (Graphics.boxWidth - this._commandWindow.width)/2;
       this._commandWindow.y = (Graphics.boxHeight - this._commandWindow.height)/2; // 150
+      // ターンウィンドウも一緒に作る
+      this._turnWindow = new Window_Turn(0, 0);
+      this._turnWindow.y = Graphics.boxHeight - this._turnWindow.height;
+      if (_useTurnWindow !== 'true') this._turnWindow.hide();
+      this.addWindow(this._turnWindow);
     }
   };
 
@@ -68,6 +98,53 @@
   Scene_Menu.prototype.commandFormation = function () {
     _Scene_Menu_commandFormation.call(this);
     this.showStatusAndHideCommand();
+  };
+
+//-----------------------------------------------------------------------------
+// Window_Turn
+//
+// The window for displaying the SRPG turn.
+
+function Window_Turn() {
+  this.initialize.apply(this, arguments);
+}
+
+Window_Turn.prototype = Object.create(Window_Base.prototype);
+Window_Turn.prototype.constructor = Window_Turn;
+
+  Window_Turn.prototype.initialize = function(x, y) {
+    var width = this.windowWidth();
+    var height = this.windowHeight();
+    Window_Base.prototype.initialize.call(this, x, y, width, height);
+    this.refresh();
+  };
+
+  Window_Turn.prototype.windowWidth = function() {
+    return 180;
+  };
+
+  Window_Turn.prototype.windowHeight = function() {
+    return this.fittingHeight(1);
+  };
+
+  Window_Turn.prototype.refresh = function() {
+    var x = this.textPadding();
+    var width = this.contents.width - this.textPadding() * 2;
+    this.contents.clear();
+    this.drawCurrencyValue(this.value(), this.currencyUnit(), x, 0, width);
+  };
+
+  Window_Turn.prototype.value = function() {
+    return $gameVariables.value(_turnVarID);
+  };
+
+  Window_Turn.prototype.currencyUnit = function() {
+    return _textTurn;
+  };
+
+  Window_Turn.prototype.show = function() {
+    this.refresh();
+    Window_Base.prototype.show.call(this);
   };
 
 // ==============================================================================
@@ -199,6 +276,7 @@ Window_MenuCommand.prototype.addFormationCommand = function() {
   Scene_Menu.prototype.showStatusAndHideCommand = function () {
     if ($gameSystem.isSRPGMode() && $gameSystem.isBattlePhase() !== 'battle_prepare') {
       this._commandWindow.hide();
+      this._turnWindow.hide();
       this._statusWindow.show();
     }
   };
@@ -206,6 +284,7 @@ Window_MenuCommand.prototype.addFormationCommand = function() {
   Scene_Menu.prototype.showCommandAndHideStatus = function () {
     if ($gameSystem.isSRPGMode() && $gameSystem.isBattlePhase() !== 'battle_prepare') {
       this._commandWindow.show();
+      if (_useTurnWindow === 'true') this._turnWindow.show();
       this._statusWindow.hide();
     }
   };
