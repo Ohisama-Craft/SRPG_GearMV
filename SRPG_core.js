@@ -3420,6 +3420,11 @@
         return 0;
     };
 
+    // 装備している武器のIDを返す（定義は、gameActor, gameEnemyで行う）
+    Game_BattlerBase.prototype.srpgWeaponId = function() {
+        return 0;
+    };
+
     // 武器の攻撃射程を返す（定義は、gameActor, gameEnemyで行う）
     Game_BattlerBase.prototype.srpgWeaponRange = function() {
         return 0;
@@ -4012,6 +4017,13 @@
         // SRPG_RangeControl.jsで再定義する
     };
 
+    // 装備している武器のIDを返す
+    Game_Actor.prototype.srpgWeaponId = function() {
+        const weapons = this.weapons();
+        const weaponId = weapons[0] ? weapons[0].id : 0;
+        return weaponId;
+    };
+
     // 武器の攻撃射程を返す
     Game_Actor.prototype.srpgWeaponRange = function() {
         return this.srpgSkillRange($dataSkills[this.attackSkillId()]);
@@ -4244,6 +4256,12 @@
         // SRPG_RangeControl.jsで再定義する
     };
 
+    // 装備している武器のIDを返す
+    Game_Enemy.prototype.srpgWeaponId = function() {
+        const weaponId = this.enemy().meta.srpgWeapon ? Number(this.enemy().meta.srpgWeapon) : 0;
+        return weaponId;
+    };
+
     // 武器の攻撃射程を返す
     Game_Enemy.prototype.srpgWeaponRange = function() {
         return this.srpgSkillRange($dataSkills[this.attackSkillId()]);
@@ -4258,7 +4276,7 @@
     Game_Enemy.prototype.srpgWeaponSpecialRange = function() {
         var value = Game_BattlerBase.prototype.srpgWeaponSpecialRange.call(this);
         if (!this.hasNoWeapons()) {
-            var weapon = $dataWeapons[this.enemy().meta.srpgWeapon];
+            var weapon = $dataWeapons[this.srpgWeaponId()];
             if (weapon && weapon.meta.specialRange) {
                 value = weapon.meta.specialRange;
             } else if (this.enemy().meta.specialRange) {
@@ -4279,7 +4297,7 @@
         if (this.enemy().meta.srpgReactionSkill) array.unshift(Number(this.enemy().meta.srpgReactionSkill));
         if (this.enemy().meta.srpgCounter === 'false') array.unshift(0);
         // 装備
-        var weapon = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
+        var weapon = $dataWeapons[this.srpgWeaponId()];
         if (this.isEquipValid(weapon)) {
             if (weapon.meta.srpgReactionSkill) array.unshift(Number(weapon.meta.srpgReactionSkill));
             if (weapon.meta.srpgCounter === 'false') array.unshift(0);
@@ -4314,7 +4332,7 @@
             }
         }, this);
         // 装備
-        var weapon = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
+        var weapon = $dataWeapons[this.srpgWeaponId()];
         if (this.isEquipValid(weapon) && weapon.meta.srpgThroughTag && n < Number(weapon.meta.srpgThroughTag)) {
             n = Number(weapon.meta.srpgThroughTag);
         }
@@ -4328,7 +4346,7 @@
 
     // 武器を装備しているか返す
     Game_Enemy.prototype.hasNoWeapons = function() {
-        var flag = !$dataWeapons[Number(this.enemy().meta.srpgWeapon)];
+        var flag = !$dataWeapons[this.srpgWeaponId()];
         this.states().forEach(function(state) {
             if (state && state.meta.srpgWeaponBreak) flag = true;
         }, this);
@@ -4342,7 +4360,7 @@
         // エネミー
         if (this.enemy().meta.srpgWeaponSkill) value = Number(this.enemy().meta.srpgWeaponSkill);
         // 装備 (将来的には、武器以外も作る？)
-        var weapon = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
+        var weapon = $dataWeapons[this.srpgWeaponId()];
         if (this.isEquipValid(weapon)) {
             if (weapon.meta.srpgWeaponSkill) value = Number(weapon.meta.srpgWeaponSkill);
         }
@@ -4358,7 +4376,7 @@
     Game_Enemy.prototype.traitObjects = function() {
         var objects = _SRPG_Game_Enemy_traitObjects.call(this);
         if ($gameSystem.isSRPGMode() === true) {
-            var weapon = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
+            var weapon = $dataWeapons[this.srpgWeaponId()];
             if (this.isEquipValid(weapon)) {
                 objects.push(weapon);
             }
@@ -4370,7 +4388,7 @@
     Game_Enemy.prototype.paramPlus = function(paramId) {
         var value = Game_Battler.prototype.paramPlus.call(this, paramId);
         if ($gameSystem.isSRPGMode() === true) {
-            var weapon = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
+            var weapon = $dataWeapons[this.srpgWeaponId()];
             if (this.isEquipValid(weapon)) {
                 value += weapon.params[paramId];
             }
@@ -4383,7 +4401,7 @@
         if (this.hasNoWeapons()) {
             return this.bareHandsAnimationId();
         } else {
-            var weapons = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
+            var weapons = $dataWeapons[this.srpgWeaponId()];
             return weapons ? weapons.animationId : 1;
         }
     };
@@ -6412,7 +6430,7 @@
 
     // エネミーの装備（武器）を描画する
     Window_Base.prototype.drawEnemySrpgEqiup = function(enemy, x, y) {
-        var weapon = $dataWeapons[Number(enemy.enemy().meta.srpgWeapon)];
+        var weapon = $dataWeapons[this.srpgWeaponId()];
         this.changeTextColor(this.systemColor());
         this.drawText(_textSrpgEquip, x, y, 92);
         this.resetTextColor();
@@ -7219,7 +7237,7 @@
             if (battler.isActor()) {
                 var item = battler.weapons()[0];
             } else {
-                var item = $dataWeapons[Number(battler.enemy().meta.srpgWeapon)];
+                var item = $dataWeapons[battler.srpgWeaponId()];
             }
             this.drawIcon(item.iconIndex, x + 2, y + 2);
         // 通常攻撃以外のスキルアイコンはそのまま表示する
@@ -7247,7 +7265,7 @@
                     if (battler.isActor()) {
                         var item = battler.weapons()[0];
                     } else {
-                        var item = $dataWeapons[Number(battler.enemy().meta.srpgWeapon)];
+                        var item = $dataWeapons[battler.srpgWeaponId()];
                     }
                     this.drawItemName(item, x, y, 280 - costWidth);
                 // 通常攻撃以外のスキル名はそのまま表示する
