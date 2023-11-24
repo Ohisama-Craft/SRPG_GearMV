@@ -6430,7 +6430,7 @@
 
     // エネミーの装備（武器）を描画する
     Window_Base.prototype.drawEnemySrpgEqiup = function(enemy, x, y) {
-        var weapon = $dataWeapons[this.srpgWeaponId()];
+        var weapon = $dataWeapons[enemy.srpgWeaponId()];
         this.changeTextColor(this.systemColor());
         this.drawText(_textSrpgEquip, x, y, 92);
         this.resetTextColor();
