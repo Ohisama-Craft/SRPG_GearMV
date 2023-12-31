@@ -6121,6 +6121,24 @@
         }
     };
 
+    // Overriding the startEntryMotion method of Sprite_Actor
+    Sprite_Actor.prototype.startEntryMotion = function() {
+        if ($gameSystem.isSRPGMode()) {
+            // Code to execute during SRPG mode
+            // Directly set the actor's position to their battle position
+            this.setHome(this._homeX, this._homeY);
+            this.moveToStartPosition();
+        }
+    };
+
+    // Override moveToStartPosition to prevent movement
+    Sprite_Actor.prototype.moveToStartPosition = function() {
+        if ($gameSystem.isSRPGMode()) {
+            // Code to execute during SRPG mode
+            // Overriding this method to prevent the actor from moving to start position
+        }
+    };
+
 //====================================================================
 // ●Sprite_Character
 //====================================================================

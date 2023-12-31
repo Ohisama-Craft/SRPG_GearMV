@@ -6,7 +6,7 @@
 //=============================================================================
 
 /*:
- * @plugindesc SRPG advanced AI (v0.9), edited by OhisamaCraft
+ * @plugindesc SRPG advanced AI (v0.9), edited by Shoukang, OhisamaCraft
  * @author Dr. Q
  * 
  * @param Target Formula
@@ -446,6 +446,8 @@
 			} else {
 				$gameTemp.clearMoveTable();
 				user.onAllActionsEnd();
+				$gameTemp.clearAreaTargets(); //shoukang clear areas
+				$gameTemp.clearArea(); //shoukang clear areas
 				return false;
 			}
 		}
@@ -614,7 +616,7 @@
 			if ($gameTemp.areaTargets().length > 0) {
 				bestTarget = $gameTemp.areaTargets().shift().event;
 			}
-			$gameTemp.clearArea();
+			// shoukang delete $gameTemp.clearArea();
 		}
 		// set the optimal target and position
 		$gameTemp.setTargetEvent(bestTarget);
