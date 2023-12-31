@@ -370,10 +370,16 @@
 // Compatibility with plugins expecting SRPG_AreaAttack.js
 //====================================================================
 
-	// modified by OhisamaCraft
-	Game_Temp.prototype.isFirstAction = function(battler) {
-		return !!(battler.shouldPayCost());
-	};
+    Game_Temp.prototype.isFirstAction = function(battler) {
+        if (battler !== undefined) {
+	        // modified by OhisamaCraft
+            return !!(battler.shouldPayCost());
+        } else {
+            // resuming previous code by Ryan
+            return !!(this.shouldPayCost());
+        }
+    };
+
 	Game_Temp.prototype.isLastAction = function() {
 		return !!(this.areaTargets().length < 1);
 	};
@@ -464,7 +470,7 @@
 		_Game_Temp_initialize.call(this);
 		this._activeAoE = null;
 		this._areaTargets = [];
-		//this._shouldPaySkillCost = true;
+		this._shouldPaySkillCost = true; // uncommented by Ryan
 	};
 
 	// easy access to the origin of the AoE
@@ -519,14 +525,14 @@
 
 	// when repeating actions, the cost/item is only paid once
 	// modified by OhisamaCraft
-	/*
+	// uncommented  by Ryan ▼ ------------------------------------------
 	Game_Temp.prototype.setShouldPayCost = function(flag) {
 		this._shouldPaySkillCost = flag;
 	};
 	Game_Temp.prototype.shouldPayCost = function() {
 		return this._shouldPaySkillCost;
 	};
-	*/
+	// uncommented  by Ryan ▲ ------------------------------------------
 	Game_Battler.prototype.setShouldPayCost = function(flag) {
 		this._shouldPaySkillCost = flag;
 	};
@@ -535,13 +541,13 @@
 	};
 	var _useItem = Game_Battler.prototype.useItem;
 	Game_Battler.prototype.useItem = function(skill) {
-		if (!$gameSystem.isSRPGMode() || this.shouldPayCost()) {
+		if (!$gameSystem.isSRPGMode() || $gameTemp.shouldPayCost() || this.shouldPayCost()) { // add old condition by Ryan
 			_useItem.call(this, skill);
 		}
 	};
 	var _actionTimesAdd = Game_Battler.prototype.SRPGActionTimesAdd;
 	Game_Battler.prototype.SRPGActionTimesAdd = function(num) {
-		if (this.shouldPayCost()) {
+		if ($gameTemp.shouldPayCost() || this.shouldPayCost()) { // add old condition by Ryan
 			_actionTimesAdd.call(this, num);
 		}
 	};
@@ -781,22 +787,27 @@
 				var skill = userArray[1].currentAction();
 
 				if ($gameTemp.selectArea(userArray[1], skill)) {
-					
-					//SoundManager.playOk();
+					SoundManager.playOk(); // uncommented by Ryan
 
 					var action = $gameTemp.areaTargets().shift();
 					var targetArray = $gameSystem.EventToUnit(action.event.eventId());
 					// 戦闘開始ウィンドウを開始する（canUseの判定のため、先にsub phase設定する）
-					$gameSystem.setSubBattlePhase('battle_window');
+					// $gameSystem.setSubBattlePhase('battle_window'); // commented by Ryan, because causing AoE_Animation cannot find MidX
 					// ターゲットイベントを設定する
 					$gameTemp.setTargetEvent(action.event);
-					//$gameTemp.setSrpgDistance($gameSystem.unitDistance($gameTemp.activeEvent(), action.event));
+					$gameTemp.setSrpgDistance($gameSystem.unitDistance($gameTemp.activeEvent(), action.event)); // uncommented by Ryan
 					// setup battle scene
-					$gameSystem.setupSrpgBattleScene(userArray, targetArray);
+					// $gameSystem.setupSrpgBattleScene(userArray, targetArray); // commented by Ryan, because causing AoE_Animation cannot find MidX
 					// special range isn't set, because the AoE will override it anyway
 
 					// バトルウィンドウをスキップする設定で行動出来ない場合はターゲット選択に戻す
 					var skill = userArray[1].currentAction().item();
+					// add old Function by Ryan
+					if (_srpgPredictionWindowMode != 3) $gameSystem.setSrpgStatusWindowNeedRefresh(userArray);
+					$gameSystem.setSrpgBattleWindowNeedRefresh(userArray, targetArray);
+					$gameSystem.setSubBattlePhase('battle_window');
+					return true;
+					/* Commented by Ryan, incompatible with AoE_Animation
 					if (_srpgPredictionWindowMode === 3 && !userArray[1].canUse(skill)) {
 						// actionの初期化
 						targetArray[1].clearActions();
@@ -818,9 +829,9 @@
 						$gameSystem.setSrpgBattleWindowNeedRefresh(userArray, targetArray);
 						return true;
 					}
-
-				}
+					*/
 				
+				}
 			}
 		}
 		return _triggerAction.call(this);
@@ -931,12 +942,14 @@
 				$gameTemp.setAutoMoveDestinationValid(true);
 				$gameTemp.setAutoMoveDestination($gameTemp.targetEvent().posX(), $gameTemp.targetEvent().posY());
 			}
+			$gameTemp.setShouldPayCost(false); // add by Ryan
 			actionArray[1].setShouldPayCost(false);
 			$gameSystem.setSubBattlePhase('invoke_action');
 			this.srpgBattleStart(actionArray, targetArray);
 		} else {
 			$gameTemp.clearArea();
 			$gameTemp.clearAreaTargets();
+			$gameTemp.setShouldPayCost(true); // add by Ryan
 			this.allBattlerSetShouldPayCost(true);
 			_srpgAfterAction.call(this);
 		}

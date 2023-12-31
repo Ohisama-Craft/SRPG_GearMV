@@ -313,6 +313,45 @@ Game_Map.prototype.scrollDownRight = function(distance) {
     this.scrollRight(distance);
 };
 
+
+//=============================================================================
+// Update setHiddenPointer for some battlePhase & subBattlePhase
+//=============================================================================
+
+// setHiddenPointer in the beginning of actor turn
+$.srpgStartActorTurn = Game_System.prototype.srpgStartActorTurn;
+Game_System.prototype.srpgStartActorTurn = function() {
+    $.srpgStartActorTurn.call(this);
+    Graphics.setHiddenPointer(true);
+};
+
+// setHiddenPointer after selecting any command
+// I don't know how to prevent Graphics.setHiddenPointer(false); in $.TouchInput_onMouseMove to be executed until the cursor really arrived to target
+$.startActorTargetting = Scene_Map.prototype.startActorTargetting;
+Scene_Map.prototype.startActorTargetting = function() {
+    $.startActorTargetting.call(this);
+    Graphics.setHiddenPointer(true);
+};
+
+// setHiddenPointer after any action
+// I don't know how to prevent Graphics.setHiddenPointer(false); in $.TouchInput_onMouseMove to be executed until the cursor really arrived to target
+$.srpgAfterAction = Scene_Map.prototype.srpgAfterAction;
+Scene_Map.prototype.srpgAfterAction = function() {
+    $.srpgAfterAction.call(this);
+    if ($gameSystem.isBattlePhase() === 'actor_phase') {
+        Graphics.setHiddenPointer(true);
+    }
+};
+
+
+/* It seems this block of code can be used for Graphics.setHiddenPointer(true); in some subBattlePhase
+$.srpgControlPhase = Scene_Map.prototype.srpgControlPhase;
+Scene_Map.prototype.srpgControlPhase = function() {
+    $.srpgControlPhase.call(this);
+    // additional function here    
+};
+*/
+
 //=============================================================================
 // Input
 //=============================================================================
@@ -324,7 +363,7 @@ Input.update = function() {
 };
 
 //=============================================================================
-// TouchInput
+// MouseInput
 //=============================================================================
 $.TouchInput_onMouseMove = TouchInput._onMouseMove;
 TouchInput._onMouseMove = function(event) {
@@ -334,13 +373,47 @@ TouchInput._onMouseMove = function(event) {
   Graphics.setHiddenPointer(false);
 };
 
+$.TouchInput_onWheel = TouchInput._onWheel;
+TouchInput._onWheel = function(event) {
+    $.TouchInput_onWheel.call(this, event);
+    if ($gameSystem.isSRPGMode()) {
+        Graphics.setHiddenPointer(true);
+    }
+};
+
+
+// Note for Mr Takumi Ariake
+// I created the initial function for $.TouchInput_onLeftButtonDown, where a left mouse click will make the mouse pointer to reappear.
+// But I haven't found a way to make the mouse pointer reappear right above the event where the current cursor(player) position is
+//  and directly select that event to enter the next subbattlephase.
+// This is the function used by SRPG Studio software.
+
+/* The function
+$.TouchInput_onLeftButtonDown = TouchInput._onLeftButtonDown;
+TouchInput._onLeftButtonDown = function(event) {
+    $.TouchInput_onLeftButtonDown.call(this, event);
+    if ($gameSystem.isSRPGMode()) {
+        Graphics.setHiddenPointer(false);
+    }
+};
+*/
+
+//=============================================================================
+// TouchInput
+//=============================================================================
+$.TouchInput_onTouchStart = TouchInput._onTouchStart;
+TouchInput._onTouchStart = function(event) {
+    $.TouchInput_onTouchStart.call(this, event);
+    Graphics.setHiddenPointer(true);
+};
+
 TouchInput.atLeftBorder = function(){
   if(this._mouseX < $.Parameters.borderDistance1) return true;
   return false;
 };
 
 TouchInput.atRightBorder = function(){
-  if(this._mouseX > Graphics.boxWidth - $.Parameters.borderDistance1) return true;
+  if(this._mouseX > Graphics.width - $.Parameters.borderDistance1) return true;
   return false;
 };
 
@@ -350,7 +423,7 @@ TouchInput.atTopBorder = function(){
 };
 
 TouchInput.atBottomBorder = function(){
-  if(this._mouseY > Graphics.boxHeight - $.Parameters.borderDistance1) return true;
+  if(this._mouseY > Graphics.height - $.Parameters.borderDistance1) return true;
   return false;
 };
 
@@ -360,7 +433,7 @@ TouchInput.atDeepLeftBorder = function(){
 };
 
 TouchInput.atDeepRightBorder = function(){
-  if(this._mouseX > Graphics.boxWidth - $.Parameters.borderDistance2) return true;
+  if(this._mouseX > Graphics.width - $.Parameters.borderDistance2) return true;
   return false;
 };
 
@@ -370,7 +443,7 @@ TouchInput.atDeepTopBorder = function(){
 };
 
 TouchInput.atDeepBottomBorder = function(){
-  if(this._mouseY > Graphics.boxHeight - $.Parameters.borderDistance2) return true;
+  if(this._mouseY > Graphics.height - $.Parameters.borderDistance2) return true;
   return false;
 };
 
