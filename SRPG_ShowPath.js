@@ -68,6 +68,69 @@
  * is used to make the path.
  */
 
+/*:ja
+ * @plugindesc SRPG戦闘でアクターの移動経路を表示します。おひさまクラフトによる改変あり。
+ * @author Dr. Q
+ * 
+ *
+ * @param Path Image
+ * @desc パスを描画するための画像
+ * @require 1
+ * @dir img/system/
+ * @type file
+ * @default srpgPath
+ * 
+ * @param Path Blend Mode
+ * @desc 移動経路の画像のブレンドモード
+ * @type select
+ * @option 通常
+ * @value 0
+ * @option 加算
+ * @value 1
+ * @option 乗算
+ * @value 2
+ * @option スクリーン
+ * @value 3
+ * @default 0
+ *
+ * @param Path Opacity
+ * @desc 移動経路の画像の透明度
+ * @type number
+ * @min 0
+ * @max 255
+ * @default 255
+ *
+ * @param Path Layer
+ * @desc 移動経路の画像をイベントに対してどの位置に表示するか
+ * @type select
+ * @option 全てのイベントの下
+ * @value 0
+ * @option プレイヤーの下
+ * @value 2
+ * @option プレイヤーの上
+ * @value 4
+ * @option 全てのイベントの上
+ * @value 6
+ * @default 2
+ *
+ * @param Max Path Length
+ * @desc 移動経路の画像の最大表示距離
+ * 移動範囲が 99 を超えない限り、変更しなくても大丈夫です。
+ * @type number
+ * @default 99
+ *
+ *
+ * @help
+ * copyright 2020 SRPG Team. all rights reserved.
+ * Released under the MIT license.
+ * ============================================================================
+ * SRPG戦闘で、移動経路を示す矢印を描きます。
+ * srpgPathの画像はimg/system/フォルダにあります。
+ *
+ * 自分で画像を作成する場合、パーツの配置はsrpgPath.pngを参考にして下さい。
+ * 
+ */
+
 (function(){
 	var parameters = PluginManager.parameters('SRPG_ShowPath');
 
@@ -85,6 +148,7 @@
 	Game_Temp.prototype.showRoute = function(destX, destY) {
 		this._activeRoute = [];
 		if (destX == undefined || destY == undefined) return;
+		if (destX < 0 || destX >= $gameMap.width() || destY < 0 || destY >= $gameMap.height()) return;
 		var moveTable = $gameTemp.MoveTable(destX, destY);
 		var list = $gameTemp.moveList();
 		if (!moveTable || !list || !list[0]) return;
