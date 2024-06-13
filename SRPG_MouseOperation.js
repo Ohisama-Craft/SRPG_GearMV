@@ -790,7 +790,9 @@ Game_Map.prototype.updateSRPGCursorCenter = function() {
   if ($gameSystem.isSubBattlePhase() === 'invoke_action') this.camCenterTo($gamePlayer);
   if ($gameSystem.isSubBattlePhase() === 'actor_move') this._flagSRPGNormalPhaseCenterOnce = false;
   if ($gameSystem.isSubBattlePhase() === 'normal'){
-    if(!this._flagSRPGNormalPhaseCenterOnce) {
+    // modified by OhisamaCraft
+    if(!this._flagSRPGNormalPhaseCenterOnce && !$gameSystem.isPlayerFollowMouse()) {
+      Graphics.setHiddenPointer(true);
       this.camCenterTo($gamePlayer);
     };
     if(this.isSRPGCamCenterStopMoving(this._oldSRPGScreenCheckX, this._oldSRPGScreenCheckY, $gamePlayer)){
@@ -801,6 +803,15 @@ Game_Map.prototype.updateSRPGCursorCenter = function() {
     this._oldSRPGScreenCheckX = this._displayX
     this._oldSRPGScreenCheckY = this._displayY
   }
+};
+
+// overwrite Return Cursor when Deselecting (in SRPG_UX_Cursor)
+Scene_Map.prototype.isReturnCursorDeselecting = function() {
+  return ((($gameSystem.isSubBattlePhase() === 'actor_move' &&
+      !($gameSystem.isPlayerFollowMouse() && !Graphics._hiddenPointer))) ||
+      $gameSystem.isSubBattlePhase() === 'actor_target' ||
+      $gameSystem.isSubBattlePhase() === 'actor_targetArea') &&
+      this.isMenuCalled();
 };
 
 Game_Map.prototype.isSRPGCamCenterStopMoving = function(oldX, oldY, obj) {
@@ -832,11 +843,9 @@ TouchInput._onWheel = function(event) {
   if ($gameSystem.isSubBattlePhase() !== 'normal') return;
   if ($gamePlayer && $gamePlayer.isMoving()) return;
   if(this._events.wheelY > 0){
-    SoundManager.playCursor();
     $gameSystem.getNextRActor();
   }; 
   if(this._events.wheelY < 0) {
-    SoundManager.playCursor();
     $gameSystem.getNextLActor();
   };
 };
@@ -844,6 +853,7 @@ TouchInput._onWheel = function(event) {
 $.Game_System_getNextRActor = Game_System.prototype.getNextRActor;
 Game_System.prototype.getNextRActor = function() {
   $.Game_System_getNextRActor.call(this);
+  Graphics.setHiddenPointer(true);
   if(!$.Parameters.isWheelCenter) return;
   $gameMap._flagSRPGNormalPhaseCenterOnce = false;  
   $gameMap._oldSRPGScreenCheckX = false;
@@ -853,6 +863,7 @@ Game_System.prototype.getNextRActor = function() {
 $.Game_System_getNextLActor = Game_System.prototype.getNextLActor;
 Game_System.prototype.getNextLActor = function() {
   $.Game_System_getNextLActor.call(this);
+  Graphics.setHiddenPointer(true);
   if(!$.Parameters.isWheelCenter) return;
   $gameMap._flagSRPGNormalPhaseCenterOnce = false;
   $gameMap._oldSRPGScreenCheckX = false;
