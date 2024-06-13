@@ -55,7 +55,7 @@
   'use strict';
 
 
-  //const switchId = 1;
+  const switchId = 1;
 
   var parameters = PluginManager.parameters('SRPG_BattleUI');
   var _useTurnWindow = parameters['useTurnWindow'] || 'true';
