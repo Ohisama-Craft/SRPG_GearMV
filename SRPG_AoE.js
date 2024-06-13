@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// SRPG_SRPG_AoE.js
+// SRPG_AoE.js
 // Copyright (c) 2020 SRPG Team. All rights reserved.
 // Released under the MIT license.
 // http://opensource.org/licenses/mit-license.php
@@ -992,6 +992,7 @@
 
 	// Find all the targets within the current AoE
 	Game_Temp.prototype.selectArea = function(user, skill) {
+		if (!user || !skill) return false;
 		this.clearAreaTargets();
 		var friends = (user.isActor()) ? 'actor' : 'enemy';
 		var opponents = (user.isActor()) ? 'enemy' : 'actor';
@@ -1094,6 +1095,8 @@
 	Game_System.prototype.srpgAIUnderstandsAoE = false;
 
 	// AoE skills can be used as long as you're in the targeted area
+	// SRPG_coreに統合
+	/*
 	var _canUse = Game_BattlerBase.prototype.canUse;
 	Game_BattlerBase.prototype.canUse = function(item) {
 		if (item && $gameSystem.isSRPGMode() && this._srpgActionTiming !== 1 &&
@@ -1114,6 +1117,7 @@
 		}
 		return _canUse.call(this, item);
 	};
+	*/
 
 	var _srpgBattle_isEnabled = Window_SrpgBattle.prototype.isEnabled;
 	Window_SrpgBattle.prototype.isEnabled = function(item) {
@@ -1274,7 +1278,7 @@
 //Battler position in AoE(when there are areaTargets) scene battle 
 //============================================================================================
     // remove actor sprite limit
-    var _Spriteset_Battle_createActors = Spriteset_Battle.prototype.createActors
+    const _Spriteset_Battle_createActors = Spriteset_Battle.prototype.createActors
     Spriteset_Battle.prototype.createActors = function() {
         if ($gameSystem.isSRPGMode() && $gameTemp.areaTargets().length > 0){
             this._actorSprites = [];
@@ -1288,7 +1292,8 @@
     };
 
     //sort to get priority right
-    var _Spriteset_Battle_createLowerLayer = Spriteset_Battle.prototype.createLowerLayer;
+	/*
+    const _Spriteset_Battle_createLowerLayer = Spriteset_Battle.prototype.createLowerLayer;
     Spriteset_Battle.prototype.createLowerLayer = function() {
         _Spriteset_Battle_createLowerLayer.call(this);
         if ($gameSystem.isSRPGMode() && $gameTemp.areaTargets().length > 0){
@@ -1296,9 +1301,27 @@
             this._battleField.removeChild(this._back2Sprite);
             this._battleField.children.sort(this.compareEnemySprite.bind(this));
             this._battleField.addChildAt(this._back2Sprite, 0);
-            this._battleField.addChildAt(this._back1Sprite, 0);
+			this._battleField.addChildAt(this._back1Sprite, 0);
         }
     };
+	*/
+	const _Spriteset_Battle_updateBattleback = Spriteset_Battle.prototype.updateBattleback;
+	Spriteset_Battle.prototype.updateBattleback = function() {
+		if ($gameSystem.isSRPGMode() && $gameTemp.areaTargets().length > 0){
+			if (!this._battlebackLocated) {
+				this._battleField.removeChild(this._back1Sprite);
+            	this._battleField.removeChild(this._back2Sprite);
+            	this._battleField.children.sort(this.compareEnemySprite.bind(this));
+            	this._battleField.addChildAt(this._back2Sprite, 0);
+				this._battleField.addChildAt(this._back1Sprite, 0);
+				this.locateBattleback();
+				this._battlebackLocated = true;
+			}
+        } else {
+			_Spriteset_Battle_updateBattleback.call(this);
+		}
+	};
+
 
     var _SRPG_Sprite_Actor_setActorHome = Sprite_Actor.prototype.setActorHome;
     Sprite_Actor.prototype.setActorHome = function (index) {
