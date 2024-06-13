@@ -656,10 +656,8 @@
             }
             if ($gameSystem.isSubBattlePhase() === 'normal') {
                 if (Input.isTriggered('pageup')) {
-                    SoundManager.playCursor();
                     $gameSystem.getNextLActor();
                 } else if (Input.isTriggered('pagedown')) {
-                    SoundManager.playCursor();
                     $gameSystem.getNextRActor();
                 }
             }
