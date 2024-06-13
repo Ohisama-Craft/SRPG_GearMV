@@ -145,7 +145,7 @@
 // Sprite_Character
 //=============================================================================
 
-	var _SRPG_Sprite_Character_updateCharacterFrame = Sprite_Character.prototype.updateCharacterFrame;
+	const _SRPG_Sprite_Character_updateCharacterFrame = Sprite_Character.prototype.updateCharacterFrame;
 	Sprite_Character.prototype.updateCharacterFrame = function() {
 		_SRPG_Sprite_Character_updateCharacterFrame.call(this);
 		
@@ -165,6 +165,23 @@
 			this.addChild(this._HpGauge);
 		}
 	};
+
+//=============================================================================
+// Game_Interpreter
+//=============================================================================
+    // 指定したイベントIDのユニットを離脱させる。
+    const _SRPG_DispHP_Game_Interpreter_removeUnit = Game_Interpreter.prototype.removeUnit;
+    Game_Interpreter.prototype.removeUnit = function(eventId) {
+        const battler = $gameSystem.setEventIdToBattler(eventId);
+        if (battler) {
+            const event = $gameMap.event(eventId);
+            if (event) {
+                battler.addState(battler.deathStateId());
+            }
+        }
+        return _SRPG_DispHP_Game_Interpreter_removeUnit.call(this, eventId);
+    };
+
 //=============================================================================
 // Window_DispHPGauge
 //=============================================================================
