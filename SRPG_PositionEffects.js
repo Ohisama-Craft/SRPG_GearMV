@@ -8,6 +8,12 @@
 /*:
  * @plugindesc SRPG extension for movement and positioning skills
  * @author Dr. Q
+ * 
+ * @param cellTargetUnavailableRegion
+ * @desc set regions that cannot be selected by cell target. If set to 0, no regions will be specified.
+ * @type number
+ * @min 0
+ * @default 255
  *
  * @help
  * Copyright (c) 2020 SRPG Team. All rights reserved.
@@ -19,6 +25,11 @@
  * In addition, skills with the <cellTarget> tag can target unoccupied passable
  * cells for teleportation, or, with some creative events and other plugins,
  * things like summoning skills, terrain modifications, etc.
+ * 
+ * Note: In RPG Maker, ceiling tiles can be traversed even if they are set 
+ * as impassable. As a result, they can be targeted with <cellTarget> skills. 
+ * To prevent this, set ceiling tiles as non-passable tiles (terrain tag 7) or 
+ * specify them in the cellTargetUnavailableRegion.
  *
  * By default, these skills can target any cell the user can move through,
  * based on their srpgThroughTag settings and the terrain tag, but you can
@@ -85,6 +96,12 @@
 /*:ja
  * @plugindesc SRPGで使用できる移動や位置替えスキルを使用可能にします（おひさまクラフトによる改変）
  * @author Dr. Q
+ * 
+ * @param cellTargetUnavailableRegion
+ * @desc cellTargetで選択できないRegionを設定します。天井タイル部分などに利用できます。0 の場合は設定しません。
+ * @type number
+ * @min 0
+ * @default 255
  *
  * @help
  * copyright 2020 SRPG Team. all rights reserved.
@@ -100,6 +117,11 @@
  * デフォルトでは、これらのスキルはsrpgThroughTag設定および地形タグに基づき使用者が移動可能な
  * マスを対象にすることができますが、<srpgTargetTag:X>をスキルやアイテムに設定することで使用者
  * 以外のキャラクターを召喚する、あるいは移動させるスキルのような、独自の設定にすることができます。
+ * 
+ * 注意：RPGツクールの仕様として、天井タイルは通行不可設定になっていても実際には通行できます。
+ * そのため、そのままでは<cellTarget>スキルで選択できてしまいます。
+ * これを防ぐためには、天井部分を射程が通らないタイル（地形タグ7）にするか、
+ * cellTargetUnavailableRegionで指定したregionにしておく必要があります。
  *
  * アクター、職業、敵キャラ、武器、防具およびステート用新メモタグ：
  * <srpgImmovable>を設定したユニットはプッシュ、プル、位置交換されなくなります。
@@ -163,6 +185,7 @@
 	var _srpgPredictionWindowMode = Number(coreParameters['srpgPredictionWindowMode'] || 1);
 
 	var parameters = PluginManager.parameters('SRPG_PositionEffects');
+	var _srpgCellTargetUnavailableRegion = Number(parameters['cellTargetUnavailableRegion'] || 255);
 
 //====================================================================
 // Stop position effects from happening during prediction
@@ -280,6 +303,9 @@
 		const action = user.currentAction();
 		if (!action) return false;
 		if (!action.item().meta.cellTarget) return false;
+		const region = $gameMap.regionId(x, y);
+		if (_srpgCellTargetUnavailableRegion > 0 &&
+			region === _srpgCellTargetUnavailableRegion) return false;
 		let tag = Number(action.item().meta.srpgTargetTag);
 		if (!(tag && tag > 0)) tag = user.srpgThroughTag();
 		if (!activeEvent.chackCellTargetMoveValid(x, y, tag)) return false;
