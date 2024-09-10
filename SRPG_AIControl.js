@@ -691,7 +691,7 @@
 		if (!user || !event || !action || !action.item()) return null;
 
 		// track whether this is an AoE effect or not
-		var isAoE = (action.area && action.area() > 0);
+		const isAoE = (action.area && action.area() > 0);
 
 		// skills that can only affect yourself
 		if (user.srpgSkillRange(action.item()) <= 0 && !isAoE) {
@@ -753,7 +753,7 @@
 					var pos = posList[i];
 					var r = action.area();
 					var mr = action.minArea();
-					var t = action.areaType();
+					var t = $gameTemp.correctShape(user, action.areaType());
 					var d = $gameMap.dirBetween(pos.x, pos.y, x, y);
 					var priority = false;
 
