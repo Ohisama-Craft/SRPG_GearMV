@@ -269,7 +269,7 @@
         if (actor_unit && event) {
             actor_unit.initTp(); 
             actor_unit.setSrpgEventId(event.eventId()); // バトラー情報にイベントIDを入れておく
-            var bitmap = ImageManager.loadFace(actor_unit.faceName()); 
+            ImageManager.loadFace(actor_unit.faceName()); 
             $gameSystem.setEventToUnit(event.eventId(), 'actor', actor_unit.actorId());
             event.setType('actor');
             var xy = event.makeAppearPoint(event, event.posX(), event.posY(), actor_unit.srpgThroughTag());
@@ -460,34 +460,23 @@
     var _SRPG_Window_MenuStatus_drawItemImage = Window_MenuStatus.prototype.drawItemImage;
     Window_MenuStatus.prototype.drawItemImage = function(index) {
         if ($gameSystem.isSRPGMode() == true && $gameSystem.isBattlePhase() === 'battle_prepare') {
-            var actor = $gameParty.members()[index];
-            var rect = this.itemRect(index);
+            const actor = $gameParty.members()[index];
+            const rect = this.itemRect(index);
+            const width = Window_Base._faceWidth;
+            const height = rect.height - 2;
             if ($gameParty.inRemainingActorList(actor.actorId())) {
                 this.changePaintOpacity(false);
             } else {
                 this.changePaintOpacity(true);
             }
-            this.drawActorFace(actor, rect.x + 1, rect.y + 1, Window_Base._faceWidth, Window_Base._faceHeight);
+            this.drawActorFace(actor, rect.x + 1, rect.y + 1, width, height);
             if ($gameParty.inLockedActorList(actor.actorId())){
-                this.drawIcon(_lockIconIndex, Window_Base._faceWidth - Window_Base._iconHeight - 1, rect.y + rect.height - Window_Base._iconHeight - 1)             
+                this.drawIcon(_lockIconIndex, width - Window_Base._iconHeight, rect.y + height - Window_Base._iconHeight);     
             }
         } else {
             _SRPG_Window_MenuStatus_drawItemImage.call(this, index);
         }
     };
-
-//remove AI sprite(Turn end sprite) when remove an actor. But I prefer to use that method in commandRemove
-    // var _SRPG_Sprite_Character_updateCharacterFrame = Sprite_Character.prototype.updateCharacterFrame;
-    // Sprite_Character.prototype.updateCharacterFrame = function() {
-    //     _SRPG_Sprite_Character_updateCharacterFrame.call(this);
-    //     if ($gameSystem.isSRPGMode() == true && this._character.isEvent() == true) {
-    //         var battlerArray = $gameSystem.EventToUnit(this._character.eventId());
-    //         if (!battlerArray) {
-       //          this.removeChild(this._turnEndSprite);
-       //          this._turnEndSprite = null;
-    //         }
-    //     }
-    // };
 
 //=================================================================================================
 //Reconstruct the startMapEvent to include battle prepare phase
@@ -532,8 +521,6 @@
     }
 
     Game_Player.prototype.srpgBattlePrepareExchangePosition = function(event){
-        //console.log(statusWindow.isClosed(), $gameSystem.srpgActorCommandStatusWindowNeedRefresh())
-        //if (statusWindow.isOpening() || statusWindow.isClosing()) return;
         if (Number(event.event().meta.id) === 0 && event.eventId() !== $gameTemp.activeEvent().eventId()) {
             var battlerArray = $gameSystem.EventToUnit(event.eventId());
             SoundManager.playOk();
@@ -742,6 +729,7 @@
         this.setAllEventType(); //イベントタイプの設定
         this.setSrpgActors(); //アクターデータの作成
         this.setSrpgEnemys(); //エネミーデータの作成
+        this.setSrpgGuestActors(); // ゲストアクターデータの作成
         $gameMap.setEventImages();   // ユニットデータに合わせてイベントのグラフィックを変更する
         this.runBattleStartEvent(); // ゲーム開始時の自動イベントを実行する
         $gameVariables.setValue(_turnVarID, 1); //ターン数を初期化する
@@ -888,8 +876,10 @@
                 $gameTemp.pushSrpgEventList(event);
             }
             if (event.isType() === 'actor' && !event.isErased()) {
-                var actor = $gameSystem.EventToUnit(event.eventId());
-                if (actor[1]) $gameSystem.pushSrpgAllActors(event.eventId()); //refresh SrpgAllActors list
+                if (event.event().meta.type !== 'guest') {
+                    var actor = $gameSystem.EventToUnit(event.eventId());
+                    if (actor[1]) $gameSystem.pushSrpgAllActors(event.eventId()); //refresh SrpgAllActors list
+                }
             } else if (event.isType() === 'actor' && event.isErased()) event.setType('');
         });
         $gameTemp.clearMoveTable();
