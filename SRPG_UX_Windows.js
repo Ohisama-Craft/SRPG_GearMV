@@ -47,7 +47,8 @@
  * Copyright (c) 2020 SRPG Team. All rights reserved.
  * Released under the MIT license.
  * ===================================================================
- * Minor improvements to the behavior of windows
+ * Minor improvements to the behavior of windows.
+ * Please place it below the SRPG_DispHPOnMap plugin.
  * 
  * Options:
  * - Hide No Rewards: Don't show the rewards window for
@@ -61,6 +62,18 @@
  * Automatic changes:
  * - Status windows can also be closed with cancel/menu
  * - Skills are correctly disabled in the menu when not usable
+ * 
+ * ============================================================================
+ * Settings via Tags (Notes)
+ * ============================================================================
+ * === Actor Notes ===
+ * <hideHpMp:true> # HP, MP, and TP will be displayed as '???'.
+ * 
+ * === Enemy Notes ===
+ * <hideHpMp:true> # HP, MP, and TP will be displayed as '???'.
+ * 
+ * === State Notes ===
+ * <showHpMp:true> # While in this state, the <hideHpMp> tag is disabled.
  *
  */
 
@@ -107,6 +120,7 @@
  * Released under the MIT license.
  * ============================================================================
  * ウィンドウに関する細かな挙動を改善します。
+ * SRPG_DispHPOnMapより下に配置してください。
  * 
  * オプション:
  * - Hide No Rewards: 経験値、お金、アイテムを入手しなかった戦闘では、
@@ -121,6 +135,18 @@
  * - キャンセル/メニューボタンでもステータスウィンドウを閉じることが可能になります。
  * - メニューにて使用できないスキルが、適切に無効化されます。
  *
+ * ============================================================================
+ * タグ（メモ）による設定
+ * ============================================================================
+ * === アクターのメモ ===
+ *   <hideHpMp:true> # HP, MP, TPの表示が'???'になります。
+ * 
+ * === エネミーのメモ ===
+ *   <hideHpMp:true> # HP, MP, TPの表示が'???'になります。
+ * 
+ * === ステートのメモ ===
+ *   <showHpMp:true> # このステートになっている間、<hideHpMp>タグが無効化されます。
+ * 
  */
 
 (function(){
@@ -191,29 +217,6 @@
         return false;
 	};
 
-	// don't show the xp bar if no xp was gained
-	/*Window_SrpgBattleResult.prototype.drawContents = function() {
-		var lineHeight = this.lineHeight();
-		var pos = 0;
-
-		// check for exp
-		if (this._rewards.exp > 0) {
-			this.drawGainExp(6, lineHeight * pos);
-			pos += 2;
-		} else {
-			this._changeExp = 0;
-		}
-
-		// check for gold
-		if (this._rewards.gold > 0) {
-			this.drawGainGold(6, lineHeight * pos);
-			pos += 1;
-		}
-
-		// items are last, so they just happen
-		this.drawGainItem(0, lineHeight * pos);
-	};*/
-
 //====================================================================
 // only show one window when self-targeting
 //====================================================================
@@ -230,25 +233,6 @@
 			}
 		}
 	}
-
-	// cancel movement or target, plus quick targeting
-	/*
-	var _updateCallMenu = Scene_Map.prototype.updateCallMenu;
-	Scene_Map.prototype.updateCallMenu = function() {
-		if ($gameSystem.isSRPGMode() && !$gameSystem.srpgWaitMoving()) {
-			// close status windows with cancel
-			if ($gameSystem.isSubBattlePhase() === 'status_window' && this.isMenuCalled()) {
-				$gameSystem.clearSrpgStatusWindowNeedRefresh();
-				SoundManager.playCancel();
-				$gameTemp.clearActiveEvent();
-				$gameSystem.setSubBattlePhase('normal');
-				$gameTemp.clearMoveTable();
-				return;
-			}
-		}
-		_updateCallMenu.call(this);
-	};
-	*/
 
 //====================================================================
 // correctly handle enabled / disabled options in the menu
@@ -276,6 +260,15 @@
     		this.setTone(tone[0], tone[1], tone[2]);
 		} else {
 			srpgUXWindows_Window_Base_updateTone.call(this);
+		}
+	};
+
+	const srpgUXWindows_Window_Base_hpColor = Window_Base.prototype.hpColor;
+	Window_Base.prototype.hpColor = function(actor) {
+		if (actor && $gameSystem.isSRPGMode() && actor.srpgHideHpMp()) {
+			return this.normalColor();
+		} else {
+			return srpgUXWindows_Window_Base_hpColor.call(this, actor);
 		}
 	};
 
@@ -317,6 +310,132 @@
             this._srpgWindowTone = [r, g, b, 0];
         }
         this.refresh();
+    };
+
+//====================================================================
+// Do not display HP/MP based on the tag.
+//====================================================================
+	Game_BattlerBase.prototype.srpgHideHpMp = function() {
+		return false;
+	};
+
+    Game_Actor.prototype.srpgHideHpMp = function() {
+		let value = false;
+		this.states().forEach(function(state) {
+            if (state && state.meta.showHpMp === 'true') value = true;
+        }, this);
+		if (value === true) return false;
+		if (this.actor().meta.hideHpMp === 'true') return true;
+		return false;
+    };
+
+	Game_Enemy.prototype.srpgHideHpMp = function() {
+		let value = false;
+		this.states().forEach(function(state) {
+            if (state && state.meta.showHpMp === 'true') value = true;
+        }, this);
+		if (value === true) return false;
+		if (this.enemy().meta.hideHpMp === 'true') return true;
+		return false;
+    };
+
+	const srpgUXWindows_Window_Base_drawActorHp = Window_Base.prototype.drawActorHp;
+	Window_Base.prototype.drawActorHp = function(actor, x, y, width) {
+		if ($gameSystem.isSRPGMode() && actor.srpgHideHpMp()) {
+			width = width || 186;
+			var color1 = this.hpGaugeColor1();
+			var color2 = this.hpGaugeColor2();
+			this.drawGauge(x, y, width, 1.0, color1, color2);
+			this.changeTextColor(this.systemColor());
+			this.drawText(TextManager.hpA, x, y, 44);
+			this.drawCurrentAndMax('???', '???', x, y, width,
+								   this.hpColor(actor), this.normalColor());
+		} else {
+			srpgUXWindows_Window_Base_drawActorHp.call(this, actor, x, y, width);
+		}
+	};
+
+	const srpgUXWindows_Window_Base_drawActorMp = Window_Base.prototype.drawActorMp;
+	Window_Base.prototype.drawActorMp = function(actor, x, y, width) {
+		if ($gameSystem.isSRPGMode() && actor.srpgHideHpMp()) {
+			width = width || 186;
+			var color1 = this.mpGaugeColor1();
+			var color2 = this.mpGaugeColor2();
+			this.drawGauge(x, y, width, 1.0, color1, color2);
+			this.changeTextColor(this.systemColor());
+			this.drawText(TextManager.mpA, x, y, 44);
+			this.drawCurrentAndMax('???', '???', x, y, width,
+								   this.mpColor(actor), this.normalColor());
+		} else {
+			srpgUXWindows_Window_Base_drawActorMp.call(this, actor, x, y, width);
+		}
+	};
+	
+	const srpgUXWindows_Window_Base_drawActorTp = Window_Base.prototype.drawActorTp;
+	Window_Base.prototype.drawActorTp = function(actor, x, y, width) {
+		if ($gameSystem.isSRPGMode() && actor.srpgHideHpMp()) {
+			width = width || 96;
+			var color1 = this.tpGaugeColor1();
+			var color2 = this.tpGaugeColor2();
+			this.drawGauge(x, y, width, 1.0, color1, color2);
+			this.changeTextColor(this.systemColor());
+			this.drawText(TextManager.tpA, x, y, 44);
+			this.changeTextColor(this.tpColor(actor));
+			this.drawText('???', x + width - 64, y, 64, 'right');
+		} else {
+			srpgUXWindows_Window_Base_drawActorTp.call(this, actor, x, y, width);
+		}
+	};
+
+	// HPとバーを描画する（なめらかなバーの変化に対応）
+	const srpgUXWindows_Window_SrpgBattleStatus_drawActorHp = Window_SrpgBattleStatus.prototype.drawActorHp;
+    Window_SrpgBattleStatus.prototype.drawActorHp = function(actor, x, y, width) {
+		if ($gameSystem.isSRPGMode() && actor.srpgHideHpMp()) {
+			width = width || 186;
+			var color1 = this.hpGaugeColor1();
+			var color2 = this.hpGaugeColor2();
+			this.drawGauge(x, y, width, 1.0, color1, color2);
+			this.changeTextColor(this.systemColor());
+			this.drawText(TextManager.hpA, x, y, 44);
+			this.drawCurrentAndMax('???', '???', x, y, width,
+								   this.hpColor(actor), this.normalColor());
+		} else {
+			srpgUXWindows_Window_SrpgBattleStatus_drawActorHp.call(this, actor, x, y, width);
+		}
+    };
+
+    // MPとバーを描画する（なめらかなバーの変化に対応）
+	const srpgUXWindows_Window_SrpgBattleStatus_drawActorMp = Window_SrpgBattleStatus.prototype.drawActorMp;
+    Window_SrpgBattleStatus.prototype.drawActorMp = function(actor, x, y, width) {
+        if ($gameSystem.isSRPGMode() && actor.srpgHideHpMp()) {
+			width = width || 186;
+			var color1 = this.mpGaugeColor1();
+			var color2 = this.mpGaugeColor2();
+			this.drawGauge(x, y, width, 1.0, color1, color2);
+			this.changeTextColor(this.systemColor());
+			this.drawText(TextManager.mpA, x, y, 44);
+			this.drawCurrentAndMax('???', '???', x, y, width,
+								   this.mpColor(actor), this.normalColor());
+		} else {
+			srpgUXWindows_Window_SrpgBattleStatus_drawActorMp.call(this, actor, x, y, width);
+		}
+    };
+
+    // TPとバーを描画する（なめらかなバーの変化に対応）
+	const srpgUXWindows_Window_SrpgBattleStatus_drawActorTp = Window_SrpgBattleStatus.prototype.drawActorTp;
+    Window_SrpgBattleStatus.prototype.drawActorTp = function(actor, x, y, width) {
+        if ($gameSystem.isSRPGMode() && actor.srpgHideHpMp()) {
+			width = width || 96;
+			var color1 = this.tpGaugeColor1();
+			var color2 = this.tpGaugeColor2();
+			this.drawGauge(x, y, width, 1.0, color1, color2);
+			this.changeTextColor(this.systemColor());
+			this.drawText(TextManager.tpA, x, y, 44);
+			this.changeTextColor(this.tpColor(actor));
+			this.drawText('???', x + width - 64, y, 64, 'right');
+		} else {
+			srpgUXWindows_Window_SrpgBattleStatus_drawActorTp.call(this, actor, x, y, width);
+		}
     };
 
 })();
