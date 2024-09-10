@@ -7,7 +7,7 @@
 // Free to use and edit    version 1.04 fix unclaimed variable and fastern isOccupied function
 //=============================================================================
 /*:
- * @plugindesc More move modes and improved pathfinding that can handle all conditions! (edited by OhisamaCraft).
+ * @plugindesc More move modes and improved pathfinding that can handle all conditions! (edited by OhisamaCraft). Need SRPG_AIControl.
  * @author Shoukang
  *
  * @param search range
@@ -116,7 +116,7 @@
  */
 
 /*:ja
- * @plugindesc 移動モードを追加し、あらゆる条件を考慮するように経路探索を改善します（おひさまクラフトによる改変）。
+ * @plugindesc 移動モードを追加し、あらゆる条件を考慮するように経路探索を改善します（おひさまクラフトによる改変）。SRPG_AIControlが必要です。
  * @author Shoukang
  *
  * @param search range
