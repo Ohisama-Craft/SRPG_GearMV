@@ -1,7 +1,7 @@
 //=============================================================================
 // SRPG_core.js -SRPGギアMV-
-// バージョン      : 1.18 + Q
-// 最終更新日      : 2024/9/7
+// バージョン      : 1.19 + Q
+// 最終更新日      : 2024/9/18
 // 製作            : Tkool SRPG team（有明タクミ、RyanBram、Dr.Q、Shoukang、Boomy）
 // 協力            : アンチョビさん、エビさん、Tsumioさん
 // ベースプラグイン : SRPGコンバータMV（神鏡学斗(Lemon slice), Dr. Q, アンチョビ, エビ, Tsumio）
@@ -483,8 +483,8 @@
  * characters/!srpg_set_type1.png or !srpg_set_type2.png
  * system/srpgPath.png
  * faces/BigMonster.png (optional)
- * pictures/actorTurn.png(optional)
- * pictures/enemyTurn.png(optional)
+ * pictures/PlayerTurn.png(optional)
+ * pictures/EnemyTurn.png(optional)
  * 
  * - "Required" plug-ins
  * This plugin shares some functions with SRPG_core 
@@ -921,6 +921,9 @@
  * 		# Returns the battler information of the target event.
  * 
  * === Commands to return the distance between units ===.
+ *  TIPS
+ *  - It returns -1 if the specified actor/event does not exist.
+ * 
  * 	this.eventEventDistance(variableId, eventId1, eventId2);
  * 		# Returns the distance between units based on 
  * 		# the event ID to the specified variable.
@@ -1709,8 +1712,8 @@
  * characters/!srpg_set_type1.png または !srpg_set_type2.png
  * system/srpgPath.png
  * faces/BigMonster.png (任意)
- * pictures/actorTurn.png(任意)
- * pictures/enemyTurn.png(任意)
+ * pictures/PlayerTurn.png(任意)
+ * pictures/EnemyTurn.png(任意)
  * 
  * - 併用“必須”プラグイン
  * SRPG_coreと一部の機能を共有しており、導入しないと動作しません。
@@ -2076,6 +2079,9 @@
  *      # 対象のイベントのbattler情報を返します。
  * 
  * ===ユニット間の距離を返すコマンド===
+ *  TIPS
+ *  - 指定したアクター/イベントが存在しない場合は -1 を返します。
+ * 
  *   this.eventEventDistance(variableId, eventId1, eventId2);
  *      # イベントIDをもとに、ユニット間の距離を指定した変数に返します。
  *   this.actorEventDistance(variableId, actorId, eventId);
@@ -6240,7 +6246,7 @@
             var value = $gameSystem.unitDistance(event1, event2);
             $gameVariables.setValue(variableId, value);
         } else {
-            $gameVariables.setValue(variableId, 999);
+            $gameVariables.setValue(variableId, -1);
         }
         return true;
     };
@@ -6298,13 +6304,13 @@
     // イベントIDをもとに、ユニット間の距離を指定した変数に返す
     // ＊使用を推奨しないが互換性のために残してある
     Game_Interpreter.prototype.EventDistance = function(variableId, eventId1, eventId2) {
-        const event1 = this.getEvent(eventId1);
-        const event2 = this.getEvent(eventId2);
+        const event1 = $gameMap.event(this.getEventId(eventId1));
+        const event2 = $gameMap.event(this.getEventId(eventId2));
         if (event1 && event2 && !event1.isErased() && !event2.isErased()) {
             const value = $gameSystem.unitDistance(event1, event2);
             $gameVariables.setValue(variableId, value);
         } else {
-            $gameVariables.setValue(variableId, 999);
+            $gameVariables.setValue(variableId, -1);
         }
         return true;
     };
