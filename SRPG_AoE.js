@@ -898,16 +898,6 @@
 		}
 	};
 
-	// clear the AoE when you cancel targeting
-	var _updateCallMenu = Scene_Map.prototype.updateCallMenu;
-	Scene_Map.prototype.updateCallMenu = function() {
-		if ($gameSystem.isSRPGMode() && $gameSystem.isSubBattlePhase() === 'actor_target' &&
-		(Input.isTriggered('cancel') || TouchInput.isCancelled())) {
-			$gameTemp.clearArea();
-		}
-		_updateCallMenu.call(this);
-	};
-
 	// check if the skill currently selected has an AoE
 	Game_Temp.prototype.isSkillAoE = function() {
 		var unit = $gameTemp.activeEvent();
