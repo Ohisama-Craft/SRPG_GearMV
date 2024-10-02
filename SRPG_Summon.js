@@ -5,7 +5,7 @@
 // http://opensource.org/licenses/mit-license.php
 //=============================================================================
 /*:
- * @plugindesc Allow you to summon/enemy/objects during SRPG battle. v 1.04 Fix a bug for wrong action subject, edited by OhisamaCraft.
+ * @plugindesc Allow you to summon/enemy/objects during SRPG battle, edited by OhisamaCraft.
  * @author Shoukang
  *
  * @param Summon Map Id
@@ -49,13 +49,17 @@
  * script calls:
  *
  * this.summon(type, summonId, battlerId, level, turn, x, y);
- *     type: can be 'actor', 'enemy', or 'object', or other valid types.
+ *     type: can be 'actor', 'guest', 'enemy', or 'object', or other valid types.
  *     summonId: the id of the event that you are going to copy from the Summon Map.
  *     battlerId: the id of actor/enemy.
  *     level: the level of summoned actor, default is initial level of actor.
  *     turn: the life span of this event. After this number of turns the event will disappear. default is infinite.
  *     x: x position, default is $gamePlayer.posX();
  *     y: y position, default is $gamePlayer.posY();
+ * 
+ *     Actors summoned with type: 'actor' will be displayed on the menu screen and counted among the surviving actors.
+ *     Actors summoned with type: 'guest' will not be displayed on the menu screen and 
+ *     will not be counted among the surviving actors.
  *
  *     If you want to use the default vaule of a parameter, or a parameter is not needed for your summon and
  *     you are not sure what to put, simply use undefined (do not add '') as a place holder.
@@ -81,7 +85,7 @@
  */
 
 /*:ja
- * @plugindesc SRPG戦闘中に敵キャラやオブジェクトを召喚することが可能になります（おひさまクラフトによる改変）。v 1.04では誤った行動主体の不具合を修正。
+ * @plugindesc SRPG戦闘中に敵キャラやオブジェクトを召喚することが可能になります（おひさまクラフトによる改変）。
  * @author Shoukang
  *
  * @param Summon Map Id
@@ -126,13 +130,16 @@
  * スクリプト呼び出し:
  *
  * this.summon(type, summonId, battlerId, level, turn, x, y);
- *     type: 「actor」「enemy」「object」のいずれか、あるいは別の有効なタイプを入力します。
+ *     type: 「actor」「guest」「enemy」「object」のいずれか、あるいは別の有効なタイプを入力します。
  *     summonId: 召喚マップからコピーするイベントのIDです。
  *     battlerId: アクターあるいは敵キャラのIDです。
  *     level: 召喚されるアクターのレベルです。デフォルトはそのアクターの初期レベルです。
  *     turn: このイベントの有効期限。この数のターン数が経過すると、そのイベントは消滅します。デフォルトは無限です。
  *     x: Ｘ座標。デフォルトは$gamePlayer.posX();（プレイヤーのＸ座標）
  *     y: Y座標。デフォルトは$gamePlayer.posY();（プレイヤーのY座標）
+ *
+ *     type:'actor'で召喚したアクターはメニュー画面に表示され、生存しているアクター数に含まれます。
+ *     type:'guest'で召喚したアクターはメニュー画面に表示されず、生存しているアクター数にも含まれません。
  *
  *     パラメータ不要あるいは適切なパラメータ不明など、パラメータのデフォルト値をそのまま使用したい場合、そのパラメータには
  *     「undefined」と入力してください。
@@ -215,9 +222,10 @@
     // script call
     // modified by OhisamaCraft
     Game_Interpreter.prototype.summon = function(type, summonId, battlerId, level, turn, x, y, mode){
-        if (x === undefined) x = $gamePlayer.posX();
-        if (y === undefined) y = $gamePlayer.posY();
+        if (x === undefined || x < 0) x = $gamePlayer.posX();
+        if (y === undefined || y < 0) y = $gamePlayer.posY();
         if (!turn) turn = 10000;//Number.POSITIVE_INFINITY;
+        if (!mode) mode = 'normal';
         var modifiedXy = this.modifySummonPoint(x, y) // 出現位置の補正
         x = modifiedXy[0]; y = modifiedXy[1];
         if (!$gameMap.canSummon(type, summonId, battlerId,x,y)) return;
@@ -230,9 +238,11 @@
         var eventId = $gameMap.nextEventId();
         var summonEvent = new Game_SummonEvent($gameMap.mapId(), eventId, summonId, summoner, turn, x, y);
         $gameMap.addEvent(summonEvent);
-        if (type == 'actor'){
+        if (type === 'actor'){
             this.addSummonActor(eventId, battlerId, level, mode);
-        } else if (type == 'enemy'){
+        } else if (type === 'guest'){
+            this.addSummonGuest(eventId, battlerId, level, mode);
+        } else if (type === 'enemy'){
             this.addSummonEnemy(eventId, battlerId, mode);
         } else summonEvent.setType(type);
 
@@ -289,14 +299,33 @@
         }
         actor_unit.initTp(); //TPを初期化
         actor_unit.setSrpgEventId(event.eventId()); // バトラー情報にイベントIDを入れておく
-        var bitmap = ImageManager.loadFace(actor_unit.faceName()); //顔グラフィックをプリロードする
+        let bitmap = ImageManager.loadFace(actor_unit.faceName()); //顔グラフィックをプリロードする
         $gameSystem.setEventToUnit(event.eventId(), 'actor', actor_unit);
         event.setType('actor');
         actor_unit.setBattleMode(mode);
         $gameMap.setEventImages();
-        $gameSystem.pushSrpgAllActors(event.eventId());//add or not?
+        $gameSystem.pushSrpgAllActors(event.eventId());//add
         var oldValue = $gameVariables.value(_existActorVarID);
         $gameVariables.setValue(_existActorVarID, oldValue + 1);
+        return actor_unit;
+    };
+
+    Game_Interpreter.prototype.addSummonGuest = function(eventId, actorId, level, mode) {
+        var actor_unit = new Game_Actor(actorId);
+        var event = $gameMap.event(eventId);
+        var mode = mode ? mode : 'normal';
+        actor_unit.setSummoner(event.summoner());
+        if (level){
+            actor_unit.changeLevel(level, false);
+            actor_unit.recoverAll();
+        }
+        actor_unit.initTp(); //TPを初期化
+        actor_unit.setSrpgEventId(event.eventId()); // バトラー情報にイベントIDを入れておく
+        let bitmap = ImageManager.loadFace(actor_unit.faceName()); //顔グラフィックをプリロードする
+        $gameSystem.setEventToUnit(event.eventId(), 'actor', actor_unit);
+        event.setType('actor');
+        actor_unit.setBattleMode(mode);
+        $gameMap.setEventImages();
         return actor_unit;
     };
 
