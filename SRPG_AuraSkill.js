@@ -183,95 +183,130 @@
 	var _showColor = parameters['show Aura color'] || 'true';
 
 //refresh aura at the following conditions.
-
-	var shoukang_SrpgStatus_refresh = Window_SrpgStatus.prototype.refresh;
-	Window_SrpgStatus.prototype.refresh = function() {
-		this.contents.clear();
-		if (!this._battler) return;
-		$gameTemp.refreshAura($gameTemp.activeEvent());//refresh aura when open srpgstatus window
-		if ($gameTemp.targetEvent()) $gameTemp.refreshAura($gameTemp.targetEvent());
-		shoukang_SrpgStatus_refresh.call(this);
+// modified by OhisamaCraft
+	// オーラの更新の要求フラグ
+	const _SRPG_AuraSkill_Game_Temp_initialize = Game_Temp.prototype.initialize;
+    Game_Temp.prototype.initialize = function() {
+    	_SRPG_AuraSkill_Game_Temp_initialize.call(this);
+    	this._srpgRequestRefreshAura = undefined;
 	};
 
-	var shoukang_Game_System_srpgMakeMoveTable = Game_System.prototype.srpgMakeMoveTable;
+    Game_Temp.prototype.isSrpgRequestRefreshAura = function() {
+        return this._srpgRequestRefreshAura;
+    };
+
+    Game_Temp.prototype.setSrpgRequestRefreshAura = function(target) {
+        this._srpgRequestRefreshAura = target;
+    };
+
+	Game_Temp.prototype.resetSrpgRequestRefreshAura = function() {
+        this._srpgRequestRefreshAura = undefined;
+    };
+
+	// アクターターンの開始時
+	const _SRPG_AuraSkill_Game_System_srpgStartActorTurn = Game_System.prototype.srpgStartActorTurn;
+	Game_System.prototype.srpgStartActorTurn = function() {
+		_SRPG_AuraSkill_Game_System_srpgStartActorTurn.call(this);
+		$gameTemp.setSrpgRequestRefreshAura('all');
+	};
+
+	// 自動行動アクターターンの開始時
+	const _SRPG_AuraSkill_Game_System_srpgStartAutoActorTurn = Game_System.prototype.srpgStartAutoActorTurn;
+    Game_System.prototype.srpgStartAutoActorTurn = function() {
+		_SRPG_AuraSkill_Game_System_srpgStartAutoActorTurn.call(this);
+		$gameTemp.setSrpgRequestRefreshAura('all');
+    };
+
+	// エネミーターンの開始時
+	const _SRPG_AuraSkill_Game_System_srpgStartEnemyTurn = Game_System.prototype.srpgStartEnemyTurn;
+    Game_System.prototype.srpgStartEnemyTurn = function() {
+		_SRPG_AuraSkill_Game_System_srpgStartEnemyTurn.call(this);
+		$gameTemp.setSrpgRequestRefreshAura('all');
+	};
+
+	// メニュー画面を開く時
+	const _SRPG_AuraSkill_Scene_Map_callMenu = Scene_Map.prototype.callMenu;
+	Scene_Map.prototype.callMenu = function() {
+		_SRPG_AuraSkill_Scene_Map_callMenu.call(this);
+		$gameTemp.setSrpgRequestRefreshAura('all');
+	};
+
+	// ステータスウィンドウを開く時
+	const _SRPG_AuraSkill_Game_System_setSrpgStatusWindowNeedRefresh = Game_System.prototype.setSrpgStatusWindowNeedRefresh;
+	Game_System.prototype.setSrpgStatusWindowNeedRefresh = function(battlerArray) {
+		_SRPG_AuraSkill_Game_System_setSrpgStatusWindowNeedRefresh.call(this, battlerArray);
+        $gameTemp.setSrpgRequestRefreshAura('activeAndTarget');
+    };
+
+	// アクターコマンドを開く時
+	const _SRPG_AuraSkill_Game_System_setSrpgActorCommandWindowNeedRefresh = Game_System.prototype.setSrpgActorCommandWindowNeedRefresh;
+    Game_System.prototype.setSrpgActorCommandWindowNeedRefresh = function(battlerArray) {
+		_SRPG_AuraSkill_Game_System_setSrpgActorCommandWindowNeedRefresh.call(this, battlerArray);
+        $gameTemp.setSrpgRequestRefreshAura('activeEvent');
+		$gameTemp.updateAuraList();
+    };
+	
+	// アクターコマンドをキャンセルした時
+	//activeEvent
+	const _SRPG_AuraSkill_Scene_Map_selectPreviousActorCommand = Scene_Map.prototype.selectPreviousActorCommand;
+	Scene_Map.prototype.selectPreviousActorCommand = function() {
+		_SRPG_AuraSkill_Scene_Map_selectPreviousActorCommand.call(this);
+		$gameTemp.setSrpgRequestRefreshAura('activeEvent');
+	};
+
+	// 戦闘開始前
+	const _SRPG_AuraSkill_Scene_Map_srpgBattleStart = Scene_Map.prototype.srpgBattleStart;
+	Scene_Map.prototype.srpgBattleStart = function(userArray, targetArray){
+		_SRPG_AuraSkill_Scene_Map_srpgBattleStart.call(this, userArray, targetArray);
+		$gameTemp.setSrpgRequestRefreshAura('activeAndTarget');
+    };
+
+	// 行動終了時
+	const _SRPG_AuraSkill_Scene_Map_srpgAfterAction = Scene_Map.prototype.srpgAfterAction;
+	Scene_Map.prototype.srpgAfterAction = function() {
+		_SRPG_AuraSkill_Scene_Map_srpgAfterAction.call(this);
+		$gameTemp.setSrpgRequestRefreshAura('all');
+	};
+
+	// SRPGイベントの実行時
+    const _srpg_AuraSkill_Game_Map_setupStartingMapEvent = Game_Map.prototype.setupStartingMapEvent;
+    Game_Map.prototype.setupStartingMapEvent = function() {
+		if ($gameTemp.isSrpgEventList() || $gameMap.isAnyEventStarting()) {
+			$gameTemp.setSrpgRequestRefreshAura('all');
+		}
+		return _srpg_AuraSkill_Game_Map_setupStartingMapEvent.call(this);
+    };
+
+	// Scene_Map.updateでの処理
+	const _srpg_AuraSkill_Scene_Map_srpgExtendProcessing = Scene_Map.prototype.srpgExtendProcessing;
+	Scene_Map.prototype.srpgExtendProcessing = function() {
+		_srpg_AuraSkill_Scene_Map_srpgExtendProcessing.call(this);
+        if ($gameTemp.isSrpgRequestRefreshAura() && !$gameMap.isEventRunning()) {
+			const target = $gameTemp.isSrpgRequestRefreshAura();
+			if (target === 'all') {
+				$gameTemp.refreshAuraForAll();
+			} else if (target === 'activeAndTarget') {
+				$gameTemp.refreshAuraForActiveAndTarget();
+			} else if (target === 'activeEvent') {
+				$gameTemp.refreshAura($gameTemp.activeEvent());
+			}
+			$gameTemp.resetSrpgRequestRefreshAura();
+			if (this._mapSrpgActorCommandStatusWindow.isOpen()) this._mapSrpgActorCommandStatusWindow.refresh();
+		}
+    };
+
+//Aura Range Display
+
+	const shoukang_Game_System_srpgMakeMoveTable = Game_System.prototype.srpgMakeMoveTable;
 	Game_System.prototype.srpgMakeMoveTable = function(event) {
 		$gameTemp.refreshAura(event);
 		shoukang_Game_System_srpgMakeMoveTable.call(this, event);
 		if (!$gameMap.isEventRunning() && $gameSystem.isBattlePhase() === 'actor_phase') $gameTemp.makeAuraList(event);//show aura color
 	}
 
-	var shoukang_Scene_Map_eventAfterAction = Scene_Map.prototype.eventAfterAction;
-	Scene_Map.prototype.eventAfterAction = function() {
-		if ($gameTemp.areaTargets().length === 0) $gameTemp.refreshAura($gameTemp.activeEvent());    	
-		shoukang_Scene_Map_eventAfterAction.call(this);
-	};
-
-	var shoukang_Game_System_runBattleStartEvent = Game_System.prototype.runBattleStartEvent;
-	Game_System.prototype.runBattleStartEvent = function() {
-		$gameMap.events().forEach(function(event) {
-				if (event.isErased()) return;
-				var unit = $gameSystem.EventToUnit(event.eventId());
-				if (unit && (unit[0] === 'actor' || unit[0] === 'enemy')) $gameTemp.refreshAura(event);
-		});
-		shoukang_Game_System_runBattleStartEvent.call(this);
-	};
-
-	// modified by OhisamaCraft
-	var shoukang_Scene_Map_eventBeforeBattle = Scene_Map.prototype.eventBeforeBattle;
-	Scene_Map.prototype.eventBeforeBattle = function() {
-		$gameTemp.refreshAura($gameTemp.activeEvent());
-		if ($gameTemp.targetEvent()) $gameTemp.refreshAura($gameTemp.targetEvent());//refresh aura before battle
-		if ($gameTemp.areaTargets().length > 0){
-			$gameTemp.areaTargets().forEach(function(target){
-				$gameTemp.refreshAura(target.event);
-			});
-		}
-		shoukang_Scene_Map_eventBeforeBattle.call(this);
-	};
-
-	// modified by OhisamaCraft
-	// アクターコマンド・キャンセル
-	var shoukang_Scene_Map_selectPreviousActorCommand = Scene_Map.prototype.selectPreviousActorCommand;
-    Scene_Map.prototype.selectPreviousActorCommand = function() {
-		shoukang_Scene_Map_selectPreviousActorCommand.call(this);
-		const event = $gameTemp.activeEvent();
-		const user = $gameSystem.EventToUnit(event.eventId())[1];
-		const userMove = user.srpgMove();
-		$gameTemp.refreshAura(event);
-		const userMove2 = user.srpgMove();
-		if (userMove !== userMove2) {
-			$gameTemp.clearMoveTable();
-			this._spriteset.update();
-			$gameSystem.srpgMakeMoveTable(event);
-		}
-		this._mapSrpgActorCommandStatusWindow.refresh();
-    };
-
-	var shoukang_Game_System_srpgTurnEnd = Game_System.prototype.srpgTurnEnd;
-	Game_System.prototype.srpgTurnEnd = function() {//shoukang turn end
-		$gameMap.events().forEach(function(event) {
-				if (event.isErased()) return;
-				var unit = $gameSystem.EventToUnit(event.eventId());
-				if (unit && (unit[0] === 'actor' || unit[0] === 'enemy')) $gameTemp.refreshAura(event);
-		});
-		shoukang_Game_System_srpgTurnEnd.call(this);
-	};
-
-	var shoukang_Scene_Menu_createCommandWindow = Scene_Menu.prototype.createCommandWindow;
-	Scene_Menu.prototype.createCommandWindow = function() {
-		shoukang_Scene_Menu_createCommandWindow.call(this);
-		if ($gameSystem.isSRPGMode() == true) {
-			$gameMap.events().forEach(function (event){
-				if (event.isErased()) return;
-				var unit = $gameSystem.EventToUnit(event.eventId());
-				if (unit && unit[0] === 'actor') $gameTemp.refreshAura(event);
-			});
-		}
-	};
-
 	// アクターコマンドウィンドウのリフレッシュフラグを設定する（同時にユニットの情報を保持する）
 	// modified by OhisamaCraft
-	var shoukang_Game_System_setSrpgActorCommandWindowNeedRefresh = Game_System.prototype.setSrpgActorCommandWindowNeedRefresh;
+	const shoukang_Game_System_setSrpgActorCommandWindowNeedRefresh = Game_System.prototype.setSrpgActorCommandWindowNeedRefresh;
     Game_System.prototype.setSrpgActorCommandWindowNeedRefresh = function(battlerArray) {
 		shoukang_Game_System_setSrpgActorCommandWindowNeedRefresh.call(this, battlerArray);
 		$gameTemp.updateAuraList();
@@ -290,15 +325,17 @@
 	};
 
 	Game_Temp.prototype.refreshAura = function(userevent) {
-		var user = $gameSystem.EventToUnit(userevent.eventId())[1];
+		const userArray = $gameSystem.EventToUnit(userevent.eventId());
+		if (!userArray) return;
+		const user = userArray[1];
 		user.clearAura();
-		var x = userevent.posX();
-		var y = userevent.posY();
+		const x = userevent.posX();
+		const y = userevent.posY();
 		$gameMap.events().forEach(function (event) {//check all events
-			var dx = x - event.posX();
-			var dy = y - event.posY();
+			const dx = x - event.posX();
+			const dy = y - event.posY();
 			if (event.isErased() || Math.abs(dx) > _maxRange || Math.abs(dy) > _maxRange) return;//if beyond maxrange return, just to save time.
-			var unit = $gameSystem.EventToUnit(event.eventId());
+			const unit = $gameSystem.EventToUnit(event.eventId());
 			if (unit && (unit[0] === 'actor' || unit[0] === 'enemy')){
 				unit[1].skills().forEach( function(item){//check all skills
 					if ($gameTemp.isAuraStateValid(item, userevent.isType(), unit[0], dx, dy)) user.addState(Number(item.meta.SRPGAuraState));
@@ -311,6 +348,27 @@
 				if (item.meta.SRPGAuraPage && Number(item.meta.SRPGAuraPage) != event.pageIndex()) return;
 				if ($gameTemp.isAuraStateValid(item, userevent.isType(), 'actor', dx, dy)) user.addState(Number(item.meta.SRPGAuraState));
 			}
+		});
+	};
+
+	Game_Temp.prototype.refreshAuraForActiveAndTarget = function() {
+		if ($gameTemp.activeEvent()) $gameTemp.refreshAura($gameTemp.activeEvent());
+		if ($gameTemp.targetEvent()) $gameTemp.refreshAura($gameTemp.targetEvent());
+	};
+
+	Game_Temp.prototype.refreshAuraForAreaTargets = function() {
+		if ($gameTemp.areaTargets().length > 0){
+			$gameTemp.areaTargets().forEach(function(target){
+				$gameTemp.refreshAura(target.event);
+			});
+		}
+	};
+
+	Game_Temp.prototype.refreshAuraForAll = function() {
+		$gameMap.events().forEach(function(event) {
+			if (event.isErased()) return;
+			const unit = $gameSystem.EventToUnit(event.eventId());
+			if (unit && (unit[0] === 'actor' || unit[0] === 'enemy')) $gameTemp.refreshAura(event);
 		});
 	};
 
