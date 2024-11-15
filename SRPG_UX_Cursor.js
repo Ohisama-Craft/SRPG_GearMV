@@ -253,6 +253,9 @@
 	var autoTarget = !!eval(parameters['Auto Target']);
 	var autoSelect = Number(parameters['Auto Select']);
 
+	var UX_Windows_parameters = PluginManager.parameters('SRPG_UX_Windows');
+	var _srpgAutoOpenActorCommandStatusWindow = !!eval(UX_Windows_parameters['srpgAutoOpenActorCommandStatusWindow']);
+
 //====================================================================
 // cursor-style movement
 //====================================================================
@@ -382,6 +385,16 @@
 			$gamePlayer.slideTo(event.posX(), event.posY());
 		}
 		return _srpg_UXCursor_triggerdCancelInUpdateCallMenu.call(this);
+    }
+
+	// アクターの移動処理キャンセル
+	const srpgUXWindows_Scene_Map_srpgCancelActorMove = Scene_Map.prototype.srpgCancelActorMove;
+    Scene_Map.prototype.srpgCancelActorMove = function(){
+		const battlerArray = $gameSystem.EventToUnit($gameTemp.activeEvent().eventId());
+		srpgUXWindows_Scene_Map_srpgCancelActorMove.call(this);
+		if (_srpgAutoOpenActorCommandStatusWindow) {
+			$gameSystem.setSrpgActorCommandStatusWindowNeedRefresh(battlerArray, true);
+		}
     }
 
 	// If autoselect applies, cancelling the battle preview skips back to the command window
