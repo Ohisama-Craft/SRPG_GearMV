@@ -173,6 +173,10 @@
  this plugin not compatible with EST_STRATEGY_MOUSE_CAM.js
  because this is Fork Version from that plugin thus most of the code
  already included in this plugin... using both might mess the aliased method.
+ 
+ Additionally, when operating on a tablet device, the plugin may not function correctly. 
+ If your game is primarily intended for tablet operation, 
+ it might be better to turn this plugin off.
 
  ■ Parameters       ╒══════════════════════════╛
   >> Border Scroll Switch
@@ -369,6 +373,9 @@
  ほとんどのプラグインと互換性があります。
  本プラグインはEST_STRATEGY_MOUSE_CAM.jsとは互換性がありませんが、これは本プラグインがそのフォークバージョンであるためです。
  そのためほとんどのコードが含まれています。両方導入してしまうと、上書きしたメソッドに不都合が生じます。
+ 
+ また、タブレット端末で操作した場合、上手く動作しない場合があります。
+ タブレット端末での操作を主とするゲームの場合、本プラグインをOFFにする方が良い場合もあります。
 
  ■ パラメータ       ╒══════════════════════════╛
   >> 境界スクロールスイッチ
