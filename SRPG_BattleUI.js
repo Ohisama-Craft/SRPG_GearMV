@@ -119,6 +119,7 @@
 
   var coreParameters = PluginManager.parameters('SRPG_core');
 	var _turnVarID = Number(coreParameters['turnVarID'] || 3);
+  var _srpgTileSpriteBlendMode = Number(coreParameters['srpgTileSpriteBlendMode'] || 0);
 
   var battlePrepareParameters = PluginManager.parameters('SRPG_BattlePrepare');
 	var _lockIconIndex = Number(battlePrepareParameters['lockIconIndex']|| 195);
@@ -266,13 +267,7 @@ Window_Turn.prototype.constructor = Window_Turn;
         this.bitmap = new Bitmap(tileWidth - 4, tileHeight - 4);
         this.anchor.x = 0.5;
         this.anchor.y = 0.5;
-        this.blendMode = Graphics.BLEND_ADD;
-    };
-
-    Sprite_SrpgMoveTile.prototype.updateAnimation = function() {
-        this._frameCount++;
-        this._frameCount %= 20;
-        this.opacity = (60 - this._frameCount) * 3;
+        this.blendMode = _srpgTileSpriteBlendMode;
     };
 
 // ==============================================================================
