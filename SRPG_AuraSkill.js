@@ -179,8 +179,11 @@
 	var _defaultRange = parameters['default range'] || 2;
 	var _defaultTarget = parameters['default target'] || "friend";
 	var _defaultShape = parameters['default shape'] || "circle";
-	var _defaultColor = parameters['Aura color'] || "green";
+	var _defaultColor = parameters['Aura color'] || "SpringGreen";
 	var _showColor = parameters['show Aura color'] || 'true';
+
+	var coreParameters = PluginManager.parameters('SRPG_core_MZ');
+	var _srpgTileSpriteOpacity = Number(coreParameters['srpgTileSpriteOpacity'] || 150);
 
 //refresh aura at the following conditions.
 // modified by OhisamaCraft
@@ -230,6 +233,20 @@
 		_SRPG_AuraSkill_Scene_Map_callMenu.call(this);
 		$gameTemp.setSrpgRequestRefreshAura('all');
 	};
+
+	// メニュー画面を閉じる時
+	const _SRPG_AuraSkill_Scene_Menu_popScene = Scene_Menu.prototype.popScene;
+	Scene_Menu.prototype.popScene = function() {
+        if ($gameSystem.isSRPGMode()) $gameTemp.setSrpgRequestRefreshAura('all');
+        _SRPG_AuraSkill_Scene_Menu_popScene.call(this);
+    };
+
+	// アクターコマンドからの装備変更の後処理
+	const _SRPG_AuraSkill_Scene_Map_srpgAfterActorEquip = Scene_Map.prototype.srpgAfterActorEquip;
+	Scene_Map.prototype.srpgAfterActorEquip = function() {
+		_SRPG_AuraSkill_Scene_Map_srpgAfterActorEquip.call(this);
+		$gameTemp.setSrpgRequestRefreshAura('activeEvent');
+    };
 
 	// ステータスウィンドウを開く時
 	const _SRPG_AuraSkill_Game_System_setSrpgStatusWindowNeedRefresh = Game_System.prototype.setSrpgStatusWindowNeedRefresh;
@@ -456,11 +473,15 @@
 		this.aura = false;
 	}
 
+	const shoukang_Sprite_SrpgMoveTile_updateAnimation = Sprite_SrpgMoveTile.prototype.updateAnimation;
 	Sprite_SrpgMoveTile.prototype.updateAnimation = function() {
-		this._frameCount++;
-		this._frameCount %= 90;
-		if (!this.aura) this.opacity = 210 - Math.abs(this._frameCount - 45) * 2;
-		else this.opacity = Math.abs(this._frameCount - 45) * 5 - 90;
+		if (!this.aura) {
+			shoukang_Sprite_SrpgMoveTile_updateAnimation.call(this);
+		} else {
+			this._frameCount++;
+			this._frameCount %= 90;
+			this.opacity = _srpgTileSpriteOpacity + Math.abs(this._frameCount - 45) * 3 - 90;
+		}
 	};
 
 	if (!Game_Enemy.prototype.skills) {
