@@ -256,8 +256,12 @@
             }
             const terrainStateId = _tagStateList[newTerrainTag];
             if (terrainStateId > 0) {
-                user.addState(terrainStateId);
-                user.setTerrainTag(newTerrainTag);
+                if (user.isStateAddable(terrainStateId)) {
+                    user.addState(terrainStateId);
+                    user.setTerrainTag(newTerrainTag);
+                } else {
+                    user.setTerrainTag(-1);
+                }
             }
         }
 	};
@@ -266,6 +270,17 @@
     Game_ActionResult.prototype.pushRemovedState = function(stateId) {
         if (_tagStateList.contains(stateId)) return;
         _SRPG_TerrainEffect_Game_ActionResult_pushRemovedState.call(this, stateId)
+    };
+
+    // アクターコマンドからの装備変更の後処理
+	const _SRPG_TerrainEffect_Scene_Map_srpgAfterActorEquip = Scene_Map.prototype.srpgAfterActorEquip;
+	Scene_Map.prototype.srpgAfterActorEquip = function() {
+		const unitArray = $gameSystem.EventToUnit($gameTemp.activeEvent().eventId());
+		if (!unitArray) return;
+		const user = unitArray[1];
+		user.setTerrainTag(-1);
+        $gameTemp.refreshAura($gameTemp.activeEvent());
+        _SRPG_TerrainEffect_Scene_Map_srpgAfterActorEquip.call(this);
     };
 
     // ---------------------------------------------------------------------------------------
