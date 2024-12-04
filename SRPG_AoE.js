@@ -547,6 +547,8 @@
 
 	var coreParameters = PluginManager.parameters('SRPG_core');
 	var _srpgPredictionWindowMode = Number(coreParameters['srpgPredictionWindowMode'] || 1);
+	var _srpgMoveTileSpriteColor = coreParameters['srpgMoveTileSpriteColor'] || 'RoyalBlue';
+    var _srpgAttackTileSpriteColor = coreParameters['srpgAttackTileSpriteColor'] || 'Tomato';
 
 //====================================================================
 // Compatibility with plugins expecting SRPG_AreaAttack.js
@@ -1098,73 +1100,8 @@
 		return true;
 	};
 
-	/*
-	// work through the queue of actions
-	// modified by OhisamaCraft
-	var _srpgAfterAction = Scene_Map.prototype.srpgAfterAction;
-	Scene_Map.prototype.srpgAfterAction = function() {
-		var actionArray = $gameSystem.EventToUnit($gameTemp.activeEvent().eventId());
-
-		if (actionArray[1].canMove() && $gameTemp.areaTargets().length > 0) {
-			this.srpgBattlerDeadAfterBattle();
-			var nextaction = $gameTemp.areaTargets().shift();
-			user.srpgMakeNewActions();
-			user.action(0).setItemObject(nextaction.item);
-			var targetArray = $gameSystem.EventToUnit(nextaction.event.eventId());
-			$gameTemp.setTargetEvent(nextaction.event);
-			$gameTemp.setSrpgDistance($gameSystem.unitDistance($gameTemp.activeEvent(), nextaction.event));//shoukang refresh distance
-			if (_refocus) {
-				$gameTemp.setAutoMoveDestinationValid(true);
-				$gameTemp.setAutoMoveDestination($gameTemp.targetEvent().posX(), $gameTemp.targetEvent().posY());
-			}
-			user.setShouldPayCost(false);
-			$gameSystem.setSubBattlePhase('invoke_action');
-			this.srpgBattleStart(userArray, targetArray);
-		} else {
-			$gameTemp.clearArea();
-			$gameTemp.clearAreaTargets();
-			this.allBattlerSetShouldPayCost(true);
-			_srpgAfterAction.call(this);
-		}
-	};
-
-	Scene_Map.prototype.allBattlerSetShouldPayCost = function(flag) {
-		$gameMap.events().forEach(function(event) {
-            if (event.isType() === 'actor' || event.isType() === 'enemy') {
-                var battler = $gameSystem.EventToUnit(event.eventId())[1];
-				battler.setShouldPayCost(flag);
-            }
-        });
-	};
-	*/
-
 	// override this to allow the AI to use fancy AoEs
 	Game_System.prototype.srpgAIUnderstandsAoE = false;
-
-	// AoE skills can be used as long as you're in the targeted area
-	// SRPG_coreに統合
-	/*
-	var _canUse = Game_BattlerBase.prototype.canUse;
-	Game_BattlerBase.prototype.canUse = function(item) {
-		if (item && $gameSystem.isSRPGMode() && this._srpgActionTiming !== 1 &&
-		Number(item.meta.srpgAreaRange) > 0) {
-			// stop default AI from using AoEs with holes
-			if (!$gameSystem.srpgAIUnderstandsAoE &&
-			$gameSystem.isBattlePhase() !== "actor_phase" &&
-			Number(item.meta.srpgAreaMinRange) > 0) {
-				return false;
-			}
-
-			if ($gameSystem.isSubBattlePhase() === 'invoke_action' ||
-			$gameSystem.isSubBattlePhase() === 'auto_actor_action' ||
-			$gameSystem.isSubBattlePhase() === 'enemy_action' ||
-			$gameSystem.isSubBattlePhase() === 'battle_window') {
-				return $gameTemp.inArea($gameTemp.targetEvent()) || item.meta.cellTarget; //shoukang edit: check cellTarget tag
-			}
-		}
-		return _canUse.call(this, item);
-	};
-	*/
 
 	var _srpgBattle_isEnabled = Window_SrpgBattle.prototype.isEnabled;
 	Window_SrpgBattle.prototype.isEnabled = function(item) {
@@ -1285,10 +1222,10 @@
             this.bitmap.fillAll(_areaColor);
         } else {
             if (attackFlag === true) {
-                this.bitmap.fillAll('red');
+                this.bitmap.fillAll(_srpgAttackTileSpriteColor);
             } else {
-                this.bitmap.fillAll('blue');
-            }    
+                this.bitmap.fillAll(_srpgMoveTileSpriteColor);
+            }      
         }
     }
 
