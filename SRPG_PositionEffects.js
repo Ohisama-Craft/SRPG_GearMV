@@ -91,6 +91,22 @@
  * a.forward(5) + a.atk - b.def
  * This will move the user up to 5 spaces forward. If they hit an obstacle (proably the target) before moving all
  * five spaces, they deal an additional 1 damage per remaining space.
+ * 
+ * 
+ * Unit Event Activation
+ * Default Behavior:
+ * Unit events are typically executed when the acting unit steps on the event.
+ * New Feature (Ver.1.23Q):
+ * Unit events can now trigger for events moved using specific movement scripts. 
+ * If a target event is moved onto a unit event (e.g., traps), the unit event will also execute.
+ * This feature enables scenarios such as pushing an opponent into a trap to trigger its effects.
+ * How to Set Up:
+ * Check the "For Trap" event example in the sample game's 'for Summon' map for a detailed implementation.
+ * 
+ * Movement Scripts That Trigger Unit Events:
+ * a.push, a.pull, a.pushRight, a.pushLeft
+ * a.pushAoE, a.pullAoE, a.pushRightAoE, a.pushLeftAoE, a.swap
+ * 
  */
 
 /*:ja
@@ -178,6 +194,19 @@
  * a.forward(5) + a.atk - b.def
  * これは使用者を5マス前進させます。5マスすべて移動する前に障害物（恐らく対象）にぶつかった場合、
  * 残りマスごとに1ダメージを与えます。
+ * 
+ * 
+ *  * ユニットイベントの起動
+ * 通常、ユニットイベントは行動中のユニットがその上に乗った時に実行されます。
+ * Ver.1.23Qから追加された機能では、対象を移動させるスクリプトを利用した場合、
+ * 対象のイベントが移動した先にイベントユニットがある場合にもイベントユニットが実行されるようになりました。
+ * これにより、相手を吹き飛ばしてイベントユニット（罠など）を踏ませる、といった演出が可能になります。
+ * 具体的な作り方はサンプルゲームの召喚用マップにある『ユニットイベント（トラップ）』を参照してください。
+ * 
+ * 対象のイベントに対してユニットイベントが実行されるコマンド
+ * a.push, a.pull, a.pushRight, a.pushLeft, 
+ * a.pushAoE, a.pullAoE, a.pushRightAoE, a.pushLeftAoE, a.swap
+ * 
  */
 
 (function(){
@@ -361,6 +390,20 @@
 //====================================================================
 // SRPG-map-aware movement functions
 //====================================================================
+
+	const _SRPG_PositionEffects_Game_Character_initMembers = Game_Character.prototype.initMembers;
+	Game_Character.prototype.initMembers = function() {
+	    _SRPG_PositionEffects_Game_Character_initMembers.call(this);
+	    this._ForcedMovement = false;
+	};
+
+	Game_Character.prototype.isForcedMovement = function() {
+	    return this._ForcedMovement;
+	};
+
+	Game_Character.prototype.setForcedMovement = function(flag) {
+	    this._ForcedMovement = flag;
+	};
 
 	// try to move a character, stopping if it hits an obstacle, and returns the remaining distance
 	Game_Character.prototype.srpgTryMove = function(dir, distance, type) {
@@ -557,6 +600,7 @@
 		var targetEvent = target.event();
 		if (!userEvent || !targetEvent) return 0;
 		if (userEvent === targetEvent) return this.back(distance, type);
+		targetEvent.setForcedMovement(true);
 		return targetEvent.srpgTryMove(10-targetEvent.dirTo(userEvent.posX(), userEvent.posY()), distance, type);
 	};
 	// pull target in
@@ -566,6 +610,7 @@
 		var targetEvent = target.event();
 		if (!userEvent || !targetEvent) return 0;
 		if (userEvent === targetEvent) return this.forward(distance, type);
+		targetEvent.setForcedMovement(true);
 		return targetEvent.srpgTryMove(targetEvent.dirTo(userEvent.posX(), userEvent.posY()), distance, type);
 	};
 	// move target clockwise
@@ -577,6 +622,7 @@
 
 		var dir = targetEvent.dirTo(userEvent.posX(), userEvent.posY());
 		var clockwise = [0, 3, 6, 9, 2, 5, 8, 1, 4, 7];
+		targetEvent.setForcedMovement(true);
 		return targetEvent.srpgTryMove(clockwise[dir], distance, type);
 	};
 	// move target counter-clockwise
@@ -588,6 +634,7 @@
 
 		var dir = targetEvent.dirTo(userEvent.posX(), userEvent.posY());
 		var counterClockwise = [0, 7, 4, 1, 8, 5, 2, 9, 6, 3];
+		targetEvent.setForcedMovement(true);
 		return targetEvent.srpgTryMove(counterClockwise[dir], distance, type);
 	};
 
@@ -605,7 +652,10 @@
 		var userEvent = this.event();
 		var targetEvent = target.event();
 		if (!userEvent || !targetEvent) return false;
-		if (!$gameTemp.isPrediction()) userEvent.swap(targetEvent);
+		if (!$gameTemp.isPrediction()) {
+			userEvent.swap(targetEvent);
+			targetEvent.setForcedMovement(true);
+		}
 		return true;
 	};
 	// teleport to an empty cell
@@ -621,6 +671,7 @@
 		var targetEvent = target.event();
 		if (!targetEvent) return 0;
 		if (!$gameTemp.areaX || !$gameTemp.areaY) return 0;
+		targetEvent.setForcedMovement(true);
 		return targetEvent.srpgTryMove(10-targetEvent.dirTo($gameTemp.areaX(), $gameTemp.areaY()), distance, type);
 	};
 	// pull target in (to an AoE)
@@ -630,7 +681,7 @@
 		if (!targetEvent) return 0;
 		if (!$gameTemp.areaX || !$gameTemp.areaY ||
 		targetEvent.pos($gameTemp.areaX(), $gameTemp.areaY())) return 0;
-
+		targetEvent.setForcedMovement(true);
 		return targetEvent.srpgTryMove(targetEvent.dirTo($gameTemp.areaX(), $gameTemp.areaY()), distance, type);
 	};
 	// move target clockwise (around an AoE)
@@ -643,6 +694,7 @@
 
 		var dir = targetEvent.dirTo($gameTemp.areaX(), $gameTemp.areaY());
 		var clockwise = [0, 3, 6, 9, 2, 5, 8, 1, 4, 7];
+		targetEvent.setForcedMovement(true);
 		return targetEvent.srpgTryMove(clockwise[dir], distance, type);
 	};
 	// move target counter-clockwise (around an AoE)
@@ -655,6 +707,7 @@
 
 		var dir = targetEvent.dirTo($gameTemp.areaX(), $gameTemp.areaY());
 		var counterClockwise = [0, 7, 4, 1, 8, 5, 2, 9, 6, 3];
+		targetEvent.setForcedMovement(true);
 		return targetEvent.srpgTryMove(counterClockwise[dir], distance, type);
 	};
 	// teleport to an empty cell (at the center of an AoE)
