@@ -1,7 +1,7 @@
 //=============================================================================
 // SRPG_core.js -SRPGギアMV-
-// バージョン      : 1.22 + Q
-// 最終更新日      : 2024/11/22
+// バージョン      : 1.23 + Q
+// 最終更新日      : 2024/12/20
 // 製作            : Tkool SRPG team（有明タクミ、RyanBram、Dr.Q、Shoukang、Boomy）
 // 協力            : アンチョビさん、エビさん、Tsumioさん
 // ベースプラグイン : SRPGコンバータMV（神鏡学斗(Lemon slice), Dr. Q, アンチョビ, エビ, Tsumio）
@@ -601,6 +601,10 @@
  * - Creating an Actor and Enemy
  * 	<type:actor>
  * 		# The event becomes an actor (used in combination with <id:X>).
+ *  <type:guest>
+ *      # The event becomes an guest actor (used in combination with <id:X>).
+ *      # Guest actors do not appear on the menu screen 
+ *      # but behave as <type:actor>.
  * 	<type:enemy>
  * 		# the event becomes an enemy (used in combination with <id:X>).
  * 	<id:X>
@@ -1064,6 +1068,9 @@
  *      # it returns the ID only for actors, enemies, or guests.
  * 	this.checkRegionId(switchId, regionId);
  * 		# Determine if there is an actor unit on the specified region ID.
+ *  this.checkActiveOrTarget(switchId);
+ *      # (For unit events only) Returns ON if the event on top is active event, 
+ *      # or OFF if it is the target event.  
  *
  * === Commands to change unit status ===
  * TIPS
@@ -1880,6 +1887,9 @@
  * - アクター・エネミーの作成
  *   <type:actor>
  *      # そのイベントはアクターになります(<id:X>と組み合わせて使います)。
+ *   <type:guest>
+ *      # そのイベントはゲストアクターになります(<id:X>と組み合わせて使います)。
+ *      # ゲストアクターはメニュー画面に表示されませんが、<type:actor>として振舞います。
  *   <type:enemy>
  *      # そのイベントはエネミーになります(<id:X>と組み合わせて使います)。
  *   <id:X>
@@ -2262,6 +2272,9 @@
  *      # isUnitが true だとアクター/エネミー/ゲストの時のみIDを返します。
  *   this.checkRegionId(switchId, regionId);
  *      # 指定したリージョンID上にアクターユニットがいるか判定します。
+ *   this.checkActiveOrTarget(switchId);
+ *      # （ユニットイベントでの使用専用）上に乗ったイベントが行動中イベントならON、
+ *      # 対象のイベントならOFFを返します。
  * 
  * ===ユニットのステータスを変更するコマンド===
  *  TIPS
@@ -3679,13 +3692,22 @@
     };
 
     // 移動先にイベントユニットがあるかどうか返す
-    Game_System.prototype.isThereEventUnit = function(x, y) {
+    Game_System.prototype.isThereEventUnit = function(x, y, type) {
         var flag = false;
-        $gameMap.eventsXy(x, y).forEach(function(event) {
-            if (event.isType() === 'unitEvent') {
-                flag = true;
-            }
-        });
+        if (type === 'actor') {
+            $gameMap.eventsXy(x, y).forEach(function(event) {
+                if (event.isType() === 'unitEvent' || event.isType() === 'unitEventForActor' ||
+                    event.isType() === 'unitEventForAll') {
+                    flag = true;
+                }
+            });
+        } else {
+            $gameMap.eventsXy(x, y).forEach(function(event) {
+                if (event.isType() === 'unitEventForEnemy' || event.isType() === 'unitEventForAll') {
+                    flag = true;
+                }
+            });
+        }
         return flag;
     };
 
@@ -6716,6 +6738,24 @@
             if (event.isType() === 'actor') {
                 if ($gameMap.regionId(event.posX(), event.posY()) == regionId) {
                     $gameSwitches.setValue(switchId, true);
+                }
+            }
+        });
+    };
+
+    // 上に乗ったイベントが行動中イベントか対象のイベントか判定する（ユニットイベント専用）
+    Game_Interpreter.prototype.checkActiveOrTarget = function(switchId) {
+        $gameSwitches.setValue(switchId, false);
+        const eventUnit = $gameMap.event(this._eventId);
+        const x = eventUnit.x;
+        const y = eventUnit.y;
+        $gameMap.eventsXy(x, y).forEach(function(event) {
+            if (!event.isErased() && 
+               (event.isType() === 'actor' || event.isType() === 'enemy')) {
+                if (event.eventId() === $gameTemp.activeEvent().eventId()) {
+                    $gameSwitches.setValue(switchId, true);
+                } else {
+                    $gameSwitches.setValue(switchId, false);
                 }
             }
         });
@@ -9993,17 +10033,36 @@
     //----------------------------------------------------------------
     // ユニットイベントの実行
     Scene_Map.prototype.eventUnitEvent = function() {
-        if ($gameSystem.isBattlePhase() === 'actor_phase' || $gameSystem.isBattlePhase() === 'auto_actor_phase') {
-            $gameMap.eventsXy($gameTemp.activeEvent().posX(), $gameTemp.activeEvent().posY()).forEach(function(event) {
-                if (event.isType() === 'unitEvent' || event.isType() === 'unitEventForActor' ||
-                    event.isType() === 'unitEventForAll') {
+        const activeEvent = $gameTemp.activeEvent();
+        this.checkUnitEvent(activeEvent);
+        const events = $gameMap.events();
+        for (var i = 0; i <  events.length; i++) {
+            const event = events[i];
+            if (!event.isErased() &&
+                (event.isType() === 'actor' || event.isType() === 'enemy')) {
+                    if (event.isForcedMovement()) {
+                        this.checkUnitEvent(event);
+                        event.setForcedMovement(false);
+                    }
+            }
+        }
+    };
+
+    // ユニットイベントのチェック
+    Scene_Map.prototype.checkUnitEvent = function(activeEvent) {
+        const battlerArray = $gameSystem.EventToUnit(activeEvent.eventId());
+        const battler = battlerArray[1];
+        if (battlerArray && battlerArray[0] === 'actor' && battler.isAlive()) {
+            $gameMap.eventsXy(activeEvent.posX(), activeEvent.posY()).forEach(function(event) {
+                if (event.isType() === 'unitEvent' || 
+                    event.isType() === 'unitEventForActor' || event.isType() === 'unitEventForAll') {
                     if (event.pageIndex() >= 0) event.start();
                     $gameTemp.pushSrpgEventList(event);
                     $gameSystem.pushSearchedItemList([$gameTemp.activeEvent().posX(), $gameTemp.activeEvent().posY()]);
                 }
             });
-        } else if ($gameSystem.isBattlePhase() === 'enemy_phase') {
-            $gameMap.eventsXy($gameTemp.activeEvent().posX(), $gameTemp.activeEvent().posY()).forEach(function(event) {
+        } else if (battlerArray && battlerArray[0] === 'enemy' && battler.isAlive()) {
+            $gameMap.eventsXy(activeEvent.posX(), activeEvent.posY()).forEach(function(event) {
                 if (event.isType() === 'unitEventForEnemy' || event.isType() === 'unitEventForAll') {
                     if (event.pageIndex() >= 0) event.start();
                     $gameTemp.pushSrpgEventList(event);
@@ -10769,7 +10828,7 @@
                 break;
             }
             // アイテムサーチの場合
-            if (searchItem) candidatePos = this.srpgSearchItemPos(list, candidatePos); 
+            if (searchItem) candidatePos = this.srpgSearchItemPos(list, candidatePos, type); 
             return candidatePos[Math.randomInt(candidatePos.length)];
         }
         // targetが存在する場合
@@ -10847,7 +10906,7 @@
             candidatePos.push([$gameTemp.activeEvent().posX(), $gameTemp.activeEvent().posY()]);
         }
         // アイテムサーチの場合
-        if (searchItem) candidatePos = this.srpgSearchItemPos(list, candidatePos); 
+        if (searchItem) candidatePos = this.srpgSearchItemPos(list, candidatePos, type); 
         return candidatePos[Math.randomInt(candidatePos.length)];
     };
 
@@ -10869,13 +10928,13 @@
     };
 
     // アイテムサーチの処理
-    Scene_Map.prototype.srpgSearchItemPos = function(list, candidatePos) {
+    Scene_Map.prototype.srpgSearchItemPos = function(list, candidatePos, type) {
         //（最適な行動位置(check === optimalDis)がある場合は飛ばす）
         // また、誰か一人でも一度行った場所にはいかない
         for (var i = 0; i < list.length; i++) {
             var pos = list[i];
             if (pos[2] === false && $gameSystem.areTheyNoUnits(pos[0], pos[1])) {
-                if ($gameSystem.isThereEventUnit(pos[0], pos[1]) && $gameSystem.indexOfSearchedItemList([pos[0], pos[1]]) < 0) {
+                if ($gameSystem.isThereEventUnit(pos[0], pos[1], type) && $gameSystem.indexOfSearchedItemList([pos[0], pos[1]]) < 0) {
                     candidatePos = [];
                     candidatePos.push([pos[0], pos[1]]);
                 }
