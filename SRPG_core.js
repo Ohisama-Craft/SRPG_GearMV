@@ -1,6 +1,6 @@
 //=============================================================================
 // SRPG_core.js -SRPGギアMV-
-// バージョン      : 1.23 + Q
+// バージョン      : 1.24 + Q
 // 最終更新日      : 2024/12/20
 // 製作            : Tkool SRPG team（有明タクミ、RyanBram、Dr.Q、Shoukang、Boomy）
 // 協力            : アンチョビさん、エビさん、Tsumioさん
@@ -3828,6 +3828,12 @@
     //----------------------------------------------------------------
     // プレイヤーによる操作に関する処理
     //----------------------------------------------------------------
+    // キャンセルボタンの許可
+    Game_System.prototype.isCancelButtonEnabled = function() {
+        return (this.isSubBattlePhase() === 'actor_move' ||
+                this.isSubBattlePhase() === 'actor_command_window' ||
+                this.isSubBattlePhase() === 'actor_target');
+    };
     // 次のカーソル移動先のアクターを取得する(R)
     Game_System.prototype.getNextRActor = function() {
         SoundManager.playCursor();
@@ -5824,6 +5830,9 @@
     Game_Player.prototype.initialize = function() {
         _SRPG_Game_Player_initialize.call(this);
         this._srpgPlayerStoredData = {};
+        this._srpgMenuButtonArea = [0, 0, 0, 0];
+        this._srpgCancelButtonArea = [0, 0, 0, 0];
+        this._srpgPageButtonArea = [0, 0, 0, 0];
     };
 
     // プレイヤーの画像を変更する
@@ -5968,10 +5977,24 @@
     //----------------------------------------------------------------
     // キー入力に関係する処理
     //----------------------------------------------------------------
+    // タッチした場所にキャンセルボタンが存在するかの判定
+    // 仕様上、マップの一番右上にはタッチで移動できなくなる
+      Game_Player.prototype.touchOnCancelButton = function() {
+        if (!paramTouchUIEnabled) return false;
+        if (!$gameSystem.isSRPGMode()) return false;
+        if ($gameSystem.isCancelButtonEnabled() && this.inCancelButtonArea()) return true;
+        return false;
+      };
+
+      Game_Player.prototype.inCancelButtonArea = function() {
+        return SceneManager._scene.inCancelButtonArea();
+      };
+
     //戦闘中、サブフェーズの状況に応じて決定キー・タッチの処理を変える
     var _SRPG_Game_Player_triggerAction = Game_Player.prototype.triggerAction;
     Game_Player.prototype.triggerAction = function() {
         if ($gameSystem.isSRPGMode()) {
+            // 自動行動中など、不適切な時は機能しない
             if ($gameSystem.srpgWaitMoving() === true ||
                 $gameTemp.isAutoMoveDestinationValid() === true ||
                 $gameSystem.isSubBattlePhase() === 'actor_command_window' ||
@@ -5996,8 +6019,8 @@
                 }
                 return false;
             // アクターの移動先選択時
-            } else if ($gameSystem.isSubBattlePhase() === 'actor_move') {
-                if (Input.isTriggered('ok') || TouchInput.isTriggered()) {
+            } else if ($gameSystem.isSubBattlePhase() === 'actor_move') {            	
+                if (Input.isTriggered('ok') || (TouchInput.isTriggered() && !this.touchOnCancelButton())) {
                     var list = $gameTemp.moveList();
                     for (var i = 0; i < list.length; i++) {
                         var pos = list[i];
@@ -8666,13 +8689,15 @@
     Window_ActorCommand.prototype.updatePlacement = function() {
         this.width = this.windowWidth();
         this.height = this.windowHeight();
-        this.x = Math.max($gameTemp.activeEvent().screenX() - $gameMap.tileWidth() / 2 - this.windowWidth(), 0);
-        if ($gameTemp.activeEvent().screenY() < Graphics.boxHeight - 160) {
+        const offsetX = (Graphics.boxWidth - Graphics.width) / 2;
+        const offsetY = (Graphics.boxHeight - Graphics.height) / 2;
+        this.x = offsetX + Math.max($gameTemp.activeEvent().screenX() - $gameMap.tileWidth() / 2 - this.width, 0);
+        if ($gameTemp.activeEvent().screenY() < Graphics.boxHeight - offsetY - 160) {
             var eventY = $gameTemp.activeEvent().screenY();
         } else {
-            var eventY = Graphics.boxHeight - 160;
+            var eventY = Graphics.boxHeight - offsetY - 160;
         }
-        this.y = Math.max(eventY - this.windowHeight(), 0);
+        this.y = offsetY + Math.max(eventY - this.windowHeight(), 0);
     };
 
 //====================================================================
@@ -9512,6 +9537,74 @@
         this.createDeadActorWindow();
     };
 
+    if (_AAPwithCommunityBasic_CoreScript === `true`) {
+    // ボタンウィンドウを作る
+      const _SRPG_SceneMap_createButtons = Scene_Map.prototype.createButtons;
+      Scene_Map.prototype.createButtons = function() {
+        if ($gameSystem.isSRPGMode()) {
+            if (paramTouchUIEnabled) {
+                this.createMenuButton();
+                this.createCancelButton();
+                this.createPageButtons();
+            }
+        } else {
+            _SRPG_SceneMap_createButtons.call(this);
+        }
+      };
+
+      Scene_Map.prototype.reCreateButtons = function() {
+        if (paramTouchUIEnabled) {
+            if (!this._menuButton ||
+                !this._cancelButton ||
+                !(this._pageupButton && this._pagedownButton)) {
+                    this.createButtons();
+            }
+        }
+      };
+
+    /*
+    Scene_Map.prototype.createMenuButton = function() {
+        this._menuButton = new Sprite_TouchButton("menu");
+        this._menuButton.x = this.menuButtonX();
+        this._menuButton.y = this.buttonY();
+        this._menuButton.visible = false;
+        this.addChild(this._menuButton);
+      };
+    */
+      Scene_Map.prototype.createCancelButton = function() {
+        this._cancelButton = new Sprite_TouchButton("cancel");
+        this._cancelButton.x = this.cancelButtonX();
+        this._cancelButton.y = this.buttonY();
+        this._cancelButton.visible = false;
+        this.addChild(this._cancelButton);
+      };
+
+  	  Scene_Map.prototype.createPageButtons = function() {
+        this._pageupButton = new Sprite_TouchButton("pageup");
+        this._pageupButton.x = this.pageButtonX();
+        this._pageupButton.y = this.buttonY();
+        this._pageupButton.visible = false;
+        const pageupRight = this._pageupButton.x + this._pageupButton.width;
+        this._pagedownButton = new Sprite_TouchButton("pagedown");
+        this._pagedownButton.x = pageupRight + 4;
+        this._pagedownButton.y = this.buttonY();
+        this._pagedownButton.visible = false;
+        this.addChild(this._pageupButton);
+        this.addChild(this._pagedownButton);
+        this._pageupButton.setClickHandler($gameSystem.getNextLActor.bind(this));
+        this._pagedownButton.setClickHandler($gameSystem.getNextRActor.bind(this));
+      };
+    
+      const _SRPG_SceneMap_hideMenuButton = Scene_Map.prototype.hideMenuButton;
+      Scene_Map.prototype.hideMenuButton = function() {
+        _SRPG_SceneMap_hideMenuButton.call(this);
+        if (!$gameSystem.isSRPGMode()) return;
+        if (this._pageupButton && this._pagedownButton) {
+            this._pageupButton.visible = false;
+            this._pagedownButton.visible = false;
+        }
+      };
+    }
     // ステータスウィンドウを作る
     Scene_Map.prototype.createSrpgStatusWindow = function() {
         this._mapSrpgStatusWindow = new Window_SrpgStatus(0, 0);
@@ -9616,6 +9709,83 @@
     //----------------------------------------------------------------
     // プレイヤーの操作に関わる処理
     //----------------------------------------------------------------
+    if (_AAPwithCommunityBasic_CoreScript === `true`) {
+    // メニューの呼び出し許可
+      const _SRPG_SceneMap_isMenuEnabled = Scene_Map.prototype.isMenuEnabled;
+      Scene_Map.prototype.isMenuEnabled = function() {
+        if ($gameSystem.isSRPGMode()) {
+            return $gameSystem.isMenuEnabled() && !$gameMap.isEventRunning() &&
+                   ($gameSystem.isBattlePhase() === 'actor_phase' && $gameSystem.isSubBattlePhase() === 'normal');
+        } else {
+            return _SRPG_SceneMap_isMenuEnabled.call(this);
+        }
+      };
+
+      // タッチした場所にキャンセルボタンが存在するかの判定
+      // 仕様上、ボタンのある位置にはタッチで移動できなくなる
+      Scene_Map.prototype.touchOnAnyButton = function() {
+        if (!paramTouchUIEnabled) return false;
+        if (!$gameSystem.isSRPGMode()) return false;
+        if ($gameSystem.isCancelButtonEnabled() && this.inCancelButtonArea()) return true;
+        if (this.isMenuEnabled() && this.inMenuButtonArea() && !this.inCancelButtonArea() || !$gameSystem.isCancelButtonEnabled()) return true;
+        if (this.isMenuEnabled() && (this._pageupButton && this._pagedownButton)) {
+            if (this.inPageButtonsArea()) return true;
+        }
+        return false;
+      };
+
+      Scene_Map.prototype.inCancelButtonArea = function() {
+        return this.inButtonArea(this._cancelButton);
+      };
+      Scene_Map.prototype.inMenuButtonArea = function() {
+        return this.inButtonArea(this._menuButton);
+      };
+  
+      Scene_Map.prototype.inPageButtonsArea = function() {
+        return this.inButtonArea(this._pageupButton) || this.inButtonArea(this._pagedownButton);
+      };
+
+      const _SRPG_SceneMap_onMapTouch = Scene_Map.prototype.onMapTouch;
+      Scene_Map.prototype.onMapTouch = function() {
+        if (this.touchOnAnyButton()) return;
+        _SRPG_SceneMap_onMapTouch.call(this);
+      };
+      // メニューボタン・キャンセルボタン・ページボタンの表示・非表示・表示位置調整を行う
+      const _SRPG_SceneMap_updateMenuButton = Scene_Map.prototype.updateMenuButton;
+      Scene_Map.prototype.updateMenuButton = function() {
+        if ($gameSystem.isSRPGMode()) {
+            this.reCreateButtons();
+            if (this._menuButton) {
+                const menuEnabled = this.isMenuEnabled();
+                if (menuEnabled === this._menuEnabled) {
+                    this._menuButton.visible = this._menuEnabled;
+                } else {
+                    this._menuEnabled = menuEnabled;
+                }
+            }
+            if (this._cancelButton) {
+                const cancelButtonEnabled = $gameSystem.isCancelButtonEnabled();
+                if (cancelButtonEnabled === this._cancelButtonEnabled) {
+                    this._cancelButton.visible = this._cancelButtonEnabled;
+                } else {
+                    this._cancelButtonEnabled = cancelButtonEnabled;
+                }
+            }
+            if (this._pageupButton && this._pagedownButton) {
+                const pageButtonEnabled = this.isMenuEnabled();
+                if (pageButtonEnabled === this._pageButtonEnabled) {
+                    this._pageupButton.visible = this._pageButtonEnabled;
+                    this._pagedownButton.visible = this._pageButtonEnabled;
+                } else {
+                    this._pageButtonEnabled = pageButtonEnabled;
+                }
+            }
+        } else {
+            _SRPG_SceneMap_updateMenuButton.call(this);
+        }
+      };
+   }
+
     // キャンセルキー、その他のキーの実行を止める場合
     Scene_Map.prototype.srpgCanNotUpdateCallMenu = function(){
         if ($gameSystem.srpgWaitMoving() === true) return true;
