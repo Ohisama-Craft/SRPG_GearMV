@@ -173,10 +173,6 @@
     var _appearAnimation = Number(parameters['summon appear Animation Id']) || 0;
     var _disappearAnimation = Number(parameters['summon disappear Animation Id']) || 0;
 
-    var coreParameters = PluginManager.parameters('SRPG_core');
-    var _existActorVarID = Number(coreParameters['existActorVarID'] || 1);
-    var _existEnemyVarID = Number(coreParameters['existEnemyVarID'] || 2);
-
     //$dataSummon is the global variable that stores the summon Map data.
     DataManager.loadSummonData = function(mapId) {
         if (mapId > 0) {
@@ -266,7 +262,8 @@
             if (events.length === 0) break;
             for (var num = 0; num < events.length; num++) {
                 var event = events[num];
-                if (['actor', 'enemy', 'object', 'playerEvent'].indexOf(event.isType()) < 0) break modXyBreak;
+                if ($gameMap.edgePositionIsOpen(event)) break modXyBreak;
+                //if (['actor', 'enemy', 'object', 'playerEvent'].indexOf(event.isType()) < 0) break modXyBreak;
             }
             for (var d = 2; d < 10; d += 2) {
                 if ($gamePlayer.srpgAppearCanPass(newX, newY, d, 0) && previous !== (10 - d)) {
@@ -289,9 +286,9 @@
 
     // modified by OhisamaCraft
     Game_Interpreter.prototype.addSummonActor = function(eventId, actorId, level, mode) {
-        var actor_unit = new Game_Actor(actorId);
-        var event = $gameMap.event(eventId);
-        var mode = mode ? mode : 'normal';
+        const actor_unit = new Game_Actor(actorId);
+        const event = $gameMap.event(eventId);
+        mode = mode ? mode : 'normal';
         actor_unit.setSummoner(event.summoner());
         if (level){
             actor_unit.changeLevel(level, false);
@@ -299,21 +296,20 @@
         }
         actor_unit.initTp(); //TPを初期化
         actor_unit.setSrpgEventId(event.eventId()); // バトラー情報にイベントIDを入れておく
-        let bitmap = ImageManager.loadFace(actor_unit.faceName()); //顔グラフィックをプリロードする
+        $gameSystem.preloadFaceGraphic(['actor', actor_unit]); // 顔グラフィックをプリロードする
         $gameSystem.setEventToUnit(event.eventId(), 'actor', actor_unit);
         event.setType('actor');
         actor_unit.setBattleMode(mode);
         $gameMap.setEventImages();
-        $gameSystem.pushSrpgAllActors(event.eventId());//add
-        var oldValue = $gameVariables.value(_existActorVarID);
-        $gameVariables.setValue(_existActorVarID, oldValue + 1);
+        $gameSystem.pushSrpgAllActors(event.eventId()); //add
+        $gameVariables.addSrpgUnit(actor_unit);
         return actor_unit;
     };
 
     Game_Interpreter.prototype.addSummonGuest = function(eventId, actorId, level, mode) {
-        var actor_unit = new Game_Actor(actorId);
-        var event = $gameMap.event(eventId);
-        var mode = mode ? mode : 'normal';
+        const actor_unit = new Game_Actor(actorId);
+        const event = $gameMap.event(eventId);
+        mode = mode ? mode : 'normal';
         actor_unit.setSummoner(event.summoner());
         if (level){
             actor_unit.changeLevel(level, false);
@@ -321,7 +317,7 @@
         }
         actor_unit.initTp(); //TPを初期化
         actor_unit.setSrpgEventId(event.eventId()); // バトラー情報にイベントIDを入れておく
-        let bitmap = ImageManager.loadFace(actor_unit.faceName()); //顔グラフィックをプリロードする
+        $gameSystem.preloadFaceGraphic(['actor', actor_unit]); // 顔グラフィックをプリロードする
         $gameSystem.setEventToUnit(event.eventId(), 'actor', actor_unit);
         event.setType('actor');
         actor_unit.setBattleMode(mode);
@@ -331,41 +327,33 @@
 
     // modified by OhisamaCraft
     Game_Interpreter.prototype.addSummonEnemy = function(eventId, enemyId, mode) {
-        var enemy_unit = new Game_Enemy(enemyId, 0, 0);
-        var event = $gameMap.event(eventId);
-        var mode = mode ? mode : 'normal';
+        const enemy_unit = new Game_Enemy(enemyId, 0, 0);
+        const event = $gameMap.event(eventId);
+        mode = mode ? mode : 'normal';
         enemy_unit.setSummoner(event.summoner());
         enemy_unit.initTp(); //TPを初期化
         enemy_unit.setSrpgEventId(event.eventId()); // バトラー情報にイベントIDを入れておく
-        var faceName = enemy_unit.enemy().meta.faceName; //顔グラフィックをプリロードする
-        if (faceName) {
-            var bitmap = ImageManager.loadFace(faceName);
-        } else if ($gameSystem.isSideView()) {
-            var bitmap = ImageManager.loadSvEnemy(enemy_unit.battlerName(), enemy_unit.battlerHue());
-        } else {
-            var bitmap = ImageManager.loadEnemy(enemy_unit.battlerName(), enemy_unit.battlerHue());
-        }
+        $gameSystem.preloadFaceGraphic(['enemy', enemy_unit]); // 顔グラフィックをプリロードする
         $gameSystem.setEventToUnit(event.eventId(), 'enemy', enemy_unit);
         event.setType('enemy');
         enemy_unit.setBattleMode(mode);
         $gameMap.setEventImages();
-        var oldValue = $gameVariables.value(_existEnemyVarID);
-        $gameVariables.setValue(_existEnemyVarID, oldValue + 1);
+        $gameVariables.addSrpgUnit(enemy_unit);
         return true;
     };
 
     //summon validity
     Game_Map.prototype.canSummon = function(type, summonId, battlerId, x, y) {
-        if (!$gameMap.isValid(x,y)) return;
+        if (!$gameMap.isValid(x,y)) return false;
         if (type == 'actor' || type == 'enemy') {
-            if (!$gameMap.positionIsOpen(x, y)) return;
+            if (!$gameMap.positionIsOpen(x, y)) return false;
             //var battler = (type == 'actor' ? $gameActors.actor(battlerId) : new Game_Enemy(battlerId, 0, 0));
             //if ($gameMap.terrainTag(x, y) <= battler.srpgThroughTag()) return true;
             return $gameMap.fourDirectionPassable(x, y);
         }
-        var priority = $dataSummon.events[summonId].pages[0].priorityType;
+        const priority = $dataSummon.events[summonId].pages[0].priorityType;
         return $gameMap.eventsXyNt(x, y).every(function(event) {
-            return event._priorityType != priority;
+            return event._priorityType !== priority;
         });
     };
 
@@ -375,6 +363,15 @@
         }
         return true;
     };
+
+    Game_Map.prototype.edgePositionIsOpen = function(event) {
+		if (event.isErased() || !event.isType()) return true;
+		if (event.isType() === 'actor') return false;
+		if (event.isType() === 'enemy') return false;
+		if (event.isType() === 'object' && event.characterName() !== '') return false;
+		if (event.isType() === 'playerEvent') return false;
+		return true;
+	};
 
     Game_System.prototype.EventToUnit = function(event_id) {
         var battlerArray = this._EventToUnit[event_id];
@@ -401,6 +398,7 @@
                 if (event.summoner() && event.summoner().isActor()) event.updateTurns();
             }
         });
+        $gameSystem.refreshSrpgAllActors();
     }
 
     var _Game_System_srpgStartActorTurn = Game_System.prototype.srpgStartActorTurn;
@@ -424,6 +422,15 @@
         }
     };
 
+    // this._srpgAllActorsのrefreshのタイミングを「行動後イベントの実行」にうつす
+    const _srpg_Summon_Scene_Map_eventAfterAction = Scene_Map.prototype.eventAfterAction;
+    Scene_Map.prototype.eventAfterAction = function() {
+        _srpg_Summon_Scene_Map_eventAfterAction.call(this);
+        if ($gameSystem.isSRPGMode() == true && $gameSystem.isBattlePhase() !== 'battle_prepare') {
+            $gameSystem.refreshSrpgAllActors();
+        }
+    };
+    /*
     var _Scene_Menu_createCommandWindow = Scene_Menu.prototype.createCommandWindow;
     Scene_Menu.prototype.createCommandWindow = function() {
         if ($gameSystem.isSRPGMode() == true && $gameSystem.isBattlePhase() !== 'battle_prepare') {
@@ -431,6 +438,7 @@
         }
         _Scene_Menu_createCommandWindow.call(this);
     };
+    */
 
     Game_Party.prototype.existingMemberNumber = function() {
         var existingMembers = this.allmembers().filter(function(member) {
@@ -536,15 +544,12 @@
     Game_SummonEvent.prototype.updateTurns = function() {
         if (this._turns < 10000) this._turns -=1;
         if (this._turns <= 0){
-            var battleArray = $gameSystem.EventToUnit(this.eventId())
-            if (battleArray && battleArray[1] && battleArray[1].isAlive()){
-                battleArray[1].addState(battleArray[1].deathStateId())
-                if (battleArray[1].isActor()) {
-                    var oldValue = $gameVariables.value(_existActorVarID);
-                    $gameVariables.setValue(_existActorVarID, oldValue - 1);
-                } else {
-                    var oldValue = $gameVariables.value(_existEnemyVarID);
-                    $gameVariables.setValue(_existEnemyVarID, oldValue - 1);
+            const battleArray = $gameSystem.EventToUnit(this.eventId())
+            if (battleArray) {
+                const battler = battleArray[1];
+                if (battler && battler.isAlive()){
+                    battler.addState(battler.deathStateId())
+                    $gameVariables.removeSrpgUnit(battler);
                 }
             }
             this.requestAnimation(_disappearAnimation);
