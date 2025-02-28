@@ -374,7 +374,7 @@
     Window_SrpgActorCommandStatus.prototype.drawContentsEnemy = function(x, y, width, lineHeight) {
 		const x2 = x + 180;
         const width2 = Math.min(200, width - 180 - this.textPadding());
-        this.drawEnemyFace(this._battler, 0, -24, Window_Base._faceWidth, Window_Base._faceHeight);
+        this.drawEnemyFace(this._battler, 0, 0, Window_Base._faceWidth, Window_Base._faceHeight - 24);
         this.drawActorName(this._battler, x, y);
         this.drawEnemyLevel(this._battler, x, y + lineHeight * 1);
         this.drawActorIcons(this._battler, x, y + lineHeight * 2);
