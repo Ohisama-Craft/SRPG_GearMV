@@ -175,22 +175,6 @@
 	};
 
 //=============================================================================
-// Game_Interpreter
-//=============================================================================
-    // 指定したイベントIDのユニットを離脱させる。
-    const _SRPG_DispHP_Game_Interpreter_removeUnit = Game_Interpreter.prototype.removeUnit;
-    Game_Interpreter.prototype.removeUnit = function(eventId) {
-        const battler = $gameSystem.setEventIdToBattler(eventId);
-        if (battler) {
-            const event = $gameMap.event(eventId);
-            if (event) {
-                battler.addState(battler.deathStateId());
-            }
-        }
-        return _SRPG_DispHP_Game_Interpreter_removeUnit.call(this, eventId);
-    };
-
-//=============================================================================
 // Window_DispHPGauge
 //=============================================================================
 // 参考：YEP_X_VisualHpGauge.js
